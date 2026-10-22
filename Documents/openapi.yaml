@@ -1,0 +1,1420 @@
+openapi: 3.1.0
+info:
+  title: Dikichi Order Management Platform API
+  version: "1.1.0"
+  summary: Public contract of the Dikichi dine-in ordering prototype, as seen through the API Gateway.
+  description: |
+    Source of truth: `PRD-Dikichi-Order-Platform-v1.md` (v1.1), especially Decision Log D15–D24. If this file conflicts with the PRD, the PRD wins
+    and this file must be corrected.
+
+    Conventions
+    - All paths are gateway paths. Downstream services expose the same paths (no prefix rewrite).
+    - JSON only. Timestamps are ISO-8601 UTC. Money is integer IDR (no decimals).
+    - Every error uses the `ErrorResponse` schema.
+    - Only the Order resource has two contract versions (`/api/v1/orders`, `/api/v2/orders`).
+      Catalog endpoints exist only under `/api/v1`.
+    - Contract and implementation choices are resolved in the PRD Decision Log D15–D24.
+
+    Authentication
+    - Staff obtain a JWT from `POST /api/v1/auth/login` (HS256, 8 h expiry, no refresh).
+    - Send it as `Authorization: Bearer <token>`.
+    - Claims: `sub` (username), `role` (`MASTER` | `CASHIER` | `KITCHEN`), `outletId` (null for MASTER).
+    - The gateway validates the token and forwards `X-User-Name`, `X-User-Role`, `X-Outlet-Id`
+      (absent for MASTER) to downstream services, stripping any client-supplied copies.
+  contact:
+    name: Team Ambatucode
+servers:
+  - url: http://localhost:8080
+    description: API Gateway (local Docker Compose)
+  - url: http://localhost
+    description: Frontend Nginx, proxies /api to the gateway (single origin, no CORS)
+tags:
+  - name: Auth
+    description: Staff login and JWT issuing (served by catalog-service).
+  - name: Outlets
+    description: Outlet management (catalog-service).
+  - name: Tables
+    description: Dining table management (catalog-service).
+  - name: Menu Items
+    description: Menu item management and availability (catalog-service).
+  - name: Orders v1
+    description: Legacy flat Order contract (order-service).
+  - name: Orders v2
+    description: Current nested Order contract with payment summary (order-service).
+  - name: Internal
+    description: Service-to-service endpoints. Never routed by the gateway.
+security:
+  - bearerAuth: []
+
+paths:
+  # ---------------------------------------------------------------- Auth
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      summary: Staff login
+      description: Verifies a seeded staff account (BCrypt) and issues a JWT. Failure returns a generic 401
+        that does not reveal whether the username or the password was wrong.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: cashier
+              password: "<demo password from README>"
+      responses:
+        '200':
+          description: Login succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ---------------------------------------------------------------- Outlets
+  /api/v1/outlets:
+    get:
+      tags: [Outlets]
+      operationId: listOutlets
+      summary: List non-deleted outlets
+      security: []
+      responses:
+        '200':
+          description: Outlets.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Outlet'
+    post:
+      tags: [Outlets]
+      operationId: createOutlet
+      summary: Create an outlet (Master)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OutletCreateRequest'
+      responses:
+        '201':
+          description: Created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Outlet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: "Outlet id already exists (including soft-deleted rows). Code `DUPLICATE_OUTLET_ID`."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/outlets/{outletId}:
+    parameters:
+      - $ref: '#/components/parameters/OutletId'
+    get:
+      tags: [Outlets]
+      operationId: getOutlet
+      summary: Get one outlet
+      security: []
+      responses:
+        '200':
+          description: Outlet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Outlet'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Outlets]
+      operationId: replaceOutlet
+      summary: Replace an outlet (Master)
+      description: Full replacement of the editable fields. The id is taken from the path and cannot change.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OutletReplaceRequest'
+      responses:
+        '200':
+          description: Replaced.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Outlet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Outlets]
+      operationId: deleteOutlet
+      summary: Soft-delete an outlet (Master)
+      description: Sets `is_deleted = true`. Does not cascade. Its tables and menu items become unreachable
+        because outlet validation fails.
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ---------------------------------------------------------------- Tables
+  /api/v1/outlets/{outletId}/tables:
+    parameters:
+      - $ref: '#/components/parameters/OutletId'
+    get:
+      tags: [Tables]
+      operationId: listTables
+      summary: List non-deleted tables of an outlet
+      security: []
+      responses:
+        '200':
+          description: Tables.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Table'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Tables]
+      operationId: createTable
+      summary: Create a table (Master)
+      description: Tables have no PUT (Decision D6).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TableCreateRequest'
+      responses:
+        '201':
+          description: Created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Table'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: "A non-deleted table with this code already exists in the outlet. Code `DUPLICATE_TABLE_CODE`."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/outlets/{outletId}/tables/{code}:
+    parameters:
+      - $ref: '#/components/parameters/OutletId'
+      - $ref: '#/components/parameters/TableCode'
+    delete:
+      tags: [Tables]
+      operationId: deleteTable
+      summary: Soft-delete a table (Master)
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ---------------------------------------------------------------- Menu items
+  /api/v1/outlets/{outletId}/menu-items:
+    parameters:
+      - $ref: '#/components/parameters/OutletId'
+    get:
+      tags: [Menu Items]
+      operationId: listMenuItems
+      summary: List non-deleted menu items of an outlet
+      description: Includes unavailable items with `available = false`. The customer UI shows them as
+        "Sold out" and blocks adding them (Decision D5).
+      security: []
+      responses:
+        '200':
+          description: Menu items.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MenuItem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Menu Items]
+      operationId: createMenuItem
+      summary: Create a menu item (Master)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemCreateRequest'
+      responses:
+        '201':
+          description: Created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/menu-items/{menuItemId}:
+    parameters:
+      - $ref: '#/components/parameters/MenuItemId'
+    get:
+      tags: [Menu Items]
+      operationId: getMenuItem
+      summary: Get one menu item
+      security: []
+      responses:
+        '200':
+          description: Menu item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Menu Items]
+      operationId: replaceMenuItem
+      summary: Replace a menu item (Master)
+      description: Full replacement. The item stays in its outlet (outlet cannot change).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemReplaceRequest'
+      responses:
+        '200':
+          description: Replaced.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Menu Items]
+      operationId: deleteMenuItem
+      summary: Soft-delete a menu item (Master)
+      description: Hidden from all list and read endpoints and rejected for new orders. Historical orders keep
+        their snapshot name and price.
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/menu-items/{menuItemId}/availability:
+    parameters:
+      - $ref: '#/components/parameters/MenuItemId'
+    patch:
+      tags: [Menu Items]
+      operationId: patchMenuItemAvailability
+      summary: Toggle availability (Master; Cashier and Kitchen for own outlet)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityPatchRequest'
+            example:
+              available: false
+      responses:
+        '200':
+          description: Updated menu item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ---------------------------------------------------------------- Orders v1
+  /api/v1/orders:
+    post:
+      tags: [Orders v1]
+      operationId: createOrderV1
+      summary: Guest creates an order (v1 flat contract)
+      description: |
+        Public. Server validates via catalog-service, snapshots item name and unit price, computes
+        `totalAmount = sum(unitPrice * quantity)`, and creates a `PENDING` order. Client prices are ignored.
+        All or nothing: if any item is unavailable, no order is created.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V1OrderRequest'
+      responses:
+        '201':
+          description: Created. The response body is the customer's only receipt.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    get:
+      tags: [Orders v1]
+      operationId: listOrdersV1
+      summary: Order queue (Cashier, Kitchen; own outlet)
+      parameters:
+        - $ref: '#/components/parameters/OrderOutletIdQuery'
+        - $ref: '#/components/parameters/OrderStatusQuery'
+      responses:
+        '200':
+          description: Orders, oldest first. No pagination (Decision D13).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/V1OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/orders/{orderId}:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [Orders v1]
+      operationId: getOrderV1
+      summary: Order detail (Cashier, Kitchen; own outlet)
+      responses:
+        '200':
+          description: Order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1OrderResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Orders v1]
+      operationId: replaceOrderV1
+      summary: Replace a PENDING order (Cashier)
+      description: Replaces table code, customer name, and item list (Decision D10). Total is recomputed.
+        `409 ORDER_NOT_EDITABLE` if the order is not `PENDING`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V1OrderRequest'
+      responses:
+        '200':
+          description: Replaced.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/orders/{orderId}/status:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    patch:
+      tags: [Orders v1]
+      operationId: patchOrderStatusV1
+      summary: Change order status (Cashier, Kitchen)
+      description: See PRD section 6.1 for the exhaustive transition table. `PREPARING` can never be set here.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderStatusPatchRequest'
+      responses:
+        '200':
+          description: Updated order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/orders/{orderId}/pay:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      tags: [Orders v1]
+      operationId: payOrderV1
+      summary: Record a mock payment (Cashier)
+      description: Only for `ACCEPTED` orders. Atomically creates the payment and sets status `PREPARING`.
+        A repeated call returns 409. The v1 response never exposes payment details.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '200':
+          description: "Returns 200 with the updated order (status PREPARING)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ---------------------------------------------------------------- Orders v2
+  /api/v2/orders:
+    post:
+      tags: [Orders v2]
+      operationId: createOrderV2
+      summary: Guest creates an order (v2 nested contract)
+      description: Same behavior as v1, different DTOs. A v1-shaped body is rejected with 400.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V2OrderRequest'
+      responses:
+        '201':
+          description: Created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V2OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    get:
+      tags: [Orders v2]
+      operationId: listOrdersV2
+      summary: Order queue (Cashier, Kitchen; own outlet)
+      parameters:
+        - $ref: '#/components/parameters/OrderOutletIdQuery'
+        - $ref: '#/components/parameters/OrderStatusQuery'
+      responses:
+        '200':
+          description: Orders, oldest first. No pagination (Decision D13).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/V2OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v2/orders/{orderId}:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [Orders v2]
+      operationId: getOrderV2
+      summary: Order detail (Cashier, Kitchen; own outlet)
+      responses:
+        '200':
+          description: Order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V2OrderResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Orders v2]
+      operationId: replaceOrderV2
+      summary: Replace a PENDING order (Cashier)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V2OrderRequest'
+      responses:
+        '200':
+          description: Replaced.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V2OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v2/orders/{orderId}/status:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    patch:
+      tags: [Orders v2]
+      operationId: patchOrderStatusV2
+      summary: Change order status (Cashier, Kitchen)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderStatusPatchRequest'
+      responses:
+        '200':
+          description: Updated order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V2OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v2/orders/{orderId}/pay:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      tags: [Orders v2]
+      operationId: payOrderV2
+      summary: Record a mock payment (Cashier)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+            examples:
+              cash:
+                value:
+                  paymentMethod: CASH
+                  amountTendered: 60000
+              qris:
+                value:
+                  paymentMethod: QRIS
+                  amountTendered: null
+      responses:
+        '200':
+          description: "Returns 200 with the updated order, including `paymentSummary`."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V2OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ---------------------------------------------------------------- Internal
+  /internal/orders/validate:
+    servers:
+      - url: http://catalog-service:8081
+        description: Compose-internal address. Not reachable from outside and never routed by the gateway.
+    post:
+      tags: [Internal]
+      operationId: validateOrderLines
+      summary: Validate outlet, table, and items for an order (called by order-service)
+      description: |
+        Used on order create and order PUT. Returns the authoritative name and unit price per item.
+        Called with Spring RestClient, connect timeout 2 s, read timeout 3 s, no retry.
+        If unreachable or timed out, order-service returns `503 CATALOG_UNAVAILABLE` and saves nothing.
+      x-internal: true
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InternalValidateRequest'
+      responses:
+        '200':
+          description: All lines valid and available.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalValidateResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: One or more items unavailable (`ITEM_UNAVAILABLE`). Every unavailable item is listed in `errors`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: "`INVALID_OUTLET`, `INVALID_TABLE`, or `INVALID_MENU_ITEM` (not found, deleted, or from another outlet)."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: HS256 JWT from POST /api/v1/auth/login. Expires after 8 hours. No refresh token.
+
+  headers:
+    Location:
+      description: URL of the created resource.
+      schema:
+        type: string
+        format: uri-reference
+
+  parameters:
+    OutletId:
+      name: outletId
+      in: path
+      required: true
+      description: Human-readable outlet key (Decision D7).
+      schema:
+        $ref: '#/components/schemas/OutletIdValue'
+    TableCode:
+      name: code
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/TableCodeValue'
+    MenuItemId:
+      name: menuItemId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      description: Order UUID (not the human-readable order number).
+      schema:
+        type: string
+        format: uuid
+    OrderOutletIdQuery:
+      name: outletId
+      in: query
+      required: false
+      description: |
+        Optional. Defaults to the caller's JWT outlet. A value different from the caller's
+        outlet returns 403.
+      schema:
+        $ref: '#/components/schemas/OutletIdValue'
+    OrderStatusQuery:
+      name: status
+      in: query
+      required: false
+      description: |
+        Filter by one status. Omitted means the role's full set
+        (Cashier: PENDING, ACCEPTED. Kitchen: PREPARING, READY).
+        a status outside the caller's set returns 403.
+      schema:
+        $ref: '#/components/schemas/OrderStatus'
+
+  responses:
+    NoContent:
+      description: Deleted (soft). No body.
+    BadRequest:
+      description: Malformed body or field validation failure (`MALFORMED_REQUEST`, `VALIDATION_ERROR`, `DUPLICATE_MENU_ITEM`, `OUTLET_IMMUTABLE`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2026-10-21T10:00:00Z"
+            status: 400
+            code: VALIDATION_ERROR
+            message: Request validation failed
+            path: /api/v2/orders
+            errors:
+              - field: customer.name
+                message: must be between 1 and 50 characters
+    Unauthorized:
+      description: Missing or invalid token, or failed login (`UNAUTHORIZED`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Role or outlet scope violation (`FORBIDDEN`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Path resource not found or soft-deleted (`NOT_FOUND`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: |
+        State conflict. Codes: `ITEM_UNAVAILABLE`, `INVALID_STATUS_TRANSITION`, `ORDER_NOT_EDITABLE`,
+        `CONCURRENT_MODIFICATION`, `ORDER_ALREADY_PAID`, `DUPLICATE_OUTLET_ID`, and
+        `DUPLICATE_TABLE_CODE`. Paying a non-ACCEPTED order without a payment returns `INVALID_STATUS_TRANSITION`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2026-10-21T10:00:00Z"
+            status: 409
+            code: ITEM_UNAVAILABLE
+            message: One or more items are unavailable
+            path: /api/v2/orders
+            errors:
+              - field: items[0].menuItemId
+                message: Item is unavailable
+    UnprocessableEntity:
+      description: Body references an invalid entity (`INVALID_OUTLET`, `INVALID_TABLE`, `INVALID_MENU_ITEM`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ServiceUnavailable:
+      description: catalog-service unreachable or timed out (`CATALOG_UNAVAILABLE`). Nothing was saved.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # ------------------------------------------------------------ Shared values
+    OutletIdValue:
+      type: string
+      pattern: '^OUT-\d{2,}$'
+      examples: [OUT-01]
+      description: "Client-supplied outlet ID pattern, as resolved in PRD D17."
+    TableCodeValue:
+      type: string
+      pattern: '^T-\d{2,3}$'
+      examples: [T-01]
+    Role:
+      type: string
+      enum: [MASTER, CASHIER, KITCHEN]
+    OrderStatus:
+      type: string
+      enum: [PENDING, ACCEPTED, PREPARING, READY, COMPLETED, CANCELLED]
+    PaymentMethod:
+      type: string
+      enum: [CASH, QRIS, CARD]
+    PaymentStatus:
+      type: string
+      enum: [UNPAID, PAID]
+
+    # ------------------------------------------------------------ Errors
+    ErrorResponse:
+      type: object
+      required: [timestamp, status, code, message, path, errors]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        code:
+          type: string
+          description: Stable machine-readable code. See the error catalog in API-Specification.md.
+        message:
+          type: string
+          description: Human-readable. Never contains stack traces or internal details.
+        path:
+          type: string
+        errors:
+          type: array
+          description: "Always present; empty array when there are no field-level errors."
+          items:
+            $ref: '#/components/schemas/FieldError'
+    FieldError:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          examples: ["items[0].menuItemId"]
+        message:
+          type: string
+
+    # ------------------------------------------------------------ Auth
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 50
+        password:
+          type: string
+          minLength: 1
+          maxLength: 100
+    LoginResponse:
+      type: object
+      description: Login response shape resolved in PRD D15.
+      required: [accessToken, tokenType, expiresIn, user]
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          const: Bearer
+        expiresIn:
+          type: integer
+          description: Seconds until expiry (28800 = 8 hours).
+          examples: [28800]
+        user:
+          $ref: '#/components/schemas/StaffIdentity'
+    StaffIdentity:
+      type: object
+      required: [username, role, outletId]
+      properties:
+        username:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        outletId:
+          type: [string, 'null']
+          description: Null for MASTER.
+
+    # ------------------------------------------------------------ Outlets
+    Outlet:
+      type: object
+      required: [id, name, address]
+      properties:
+        id:
+          $ref: '#/components/schemas/OutletIdValue'
+        name:
+          type: string
+        address:
+          type: string
+    OutletCreateRequest:
+      type: object
+      required: [id, name, address]
+      description: "The client supplies the outlet id (no server-generated key), per PRD D17."
+      properties:
+        id:
+          $ref: '#/components/schemas/OutletIdValue'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        address:
+          type: string
+          minLength: 1
+          maxLength: 255
+    OutletReplaceRequest:
+      type: object
+      required: [name, address]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        address:
+          type: string
+          minLength: 1
+          maxLength: 255
+    # ------------------------------------------------------------ Tables
+    Table:
+      type: object
+      required: [id, outletId, code]
+      properties:
+        id:
+          type: string
+          format: uuid
+        outletId:
+          $ref: '#/components/schemas/OutletIdValue'
+        code:
+          $ref: '#/components/schemas/TableCodeValue'
+    TableCreateRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          $ref: '#/components/schemas/TableCodeValue'
+
+    # ------------------------------------------------------------ Menu items
+    MenuItem:
+      type: object
+      required: [id, outletId, name, description, price, category, available]
+      properties:
+        id:
+          type: string
+          format: uuid
+        outletId:
+          $ref: '#/components/schemas/OutletIdValue'
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        price:
+          type: integer
+          description: Integer IDR.
+        category:
+          type: string
+        available:
+          type: boolean
+    MenuItemCreateRequest:
+      type: object
+      description: Create request. `available` defaults to true when omitted (PRD D17).
+      required: [name, price, category]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: [string, 'null']
+          maxLength: 500
+        price:
+          type: integer
+          minimum: 1
+          maximum: 10000000
+        category:
+          type: string
+          minLength: 1
+          maxLength: 50
+        available:
+          type: boolean
+    MenuItemReplaceRequest:
+      type: object
+      description: Full replacement. `available` is required; the item stays in its outlet (PRD D17).
+      required: [name, price, category, available]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: [string, 'null']
+          maxLength: 500
+        price:
+          type: integer
+          minimum: 1
+          maximum: 10000000
+        category:
+          type: string
+          minLength: 1
+          maxLength: 50
+        available:
+          type: boolean
+    AvailabilityPatchRequest:
+      type: object
+      required: [available]
+      properties:
+        available:
+          type: boolean
+
+    # ------------------------------------------------------------ Orders (shared)
+    OrderItemRequest:
+      type: object
+      required: [menuItemId, quantity]
+      description: Same shape in v1 and v2. Any client-sent price is ignored.
+      properties:
+        menuItemId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+    OrderItemResponse:
+      type: object
+      required: [menuItemId, name, unitPrice, quantity, subtotal]
+      description: Same shape in v1 and v2. `name` and `unitPrice` are snapshots taken at create or PUT.
+      properties:
+        menuItemId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        unitPrice:
+          type: integer
+        quantity:
+          type: integer
+        subtotal:
+          type: integer
+          format: int64
+    OrderItemList:
+      type: array
+      minItems: 1
+      maxItems: 30
+      description: 1 to 30 lines. Duplicate `menuItemId` returns 400 (lines are not merged).
+      items:
+        $ref: '#/components/schemas/OrderItemRequest'
+    CustomerName:
+      type: string
+      minLength: 1
+      maxLength: 50
+      description: Trimmed by the server before validation.
+    OrderStatusPatchRequest:
+      type: object
+      required: [status]
+      description: Identical in v1 and v2.
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+    PaymentRequest:
+      type: object
+      required: [paymentMethod]
+      description: |
+        Identical in v1 and v2. `amountTendered` is required for CASH and must be >= the order total.
+        It must be null (or omitted) for QRIS and CARD.
+      properties:
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        amountTendered:
+          type: [integer, 'null']
+          format: int64
+          minimum: 1
+
+    # ------------------------------------------------------------ Orders v1
+    V1OrderRequest:
+      type: object
+      required: [outletId, tableCode, customerName, items]
+      description: |
+        Flat contract. Used for create and PUT.
+        On PUT, `outletId` must equal the order's current outlet, otherwise 400 `OUTLET_IMMUTABLE` (PRD D16).
+      properties:
+        outletId:
+          $ref: '#/components/schemas/OutletIdValue'
+        tableCode:
+          $ref: '#/components/schemas/TableCodeValue'
+        customerName:
+          $ref: '#/components/schemas/CustomerName'
+        items:
+          $ref: '#/components/schemas/OrderItemList'
+      example:
+        outletId: OUT-01
+        tableCode: T-01
+        customerName: Budi
+        items:
+          - menuItemId: 11111111-0000-4000-8000-000000000001
+            quantity: 2
+    V1OrderResponse:
+      type: object
+      description: Flat contract. Never exposes payment details.
+      required: [id, orderNumber, outletId, tableCode, customerName, status, items, totalAmount, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderNumber:
+          type: string
+          pattern: '^ORD-\d{4,}$'
+          examples: [ORD-0042]
+        outletId:
+          $ref: '#/components/schemas/OutletIdValue'
+        tableCode:
+          $ref: '#/components/schemas/TableCodeValue'
+        customerName:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemResponse'
+        totalAmount:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # ------------------------------------------------------------ Orders v2
+    V2Customer:
+      type: object
+      required: [name]
+      properties:
+        name:
+          $ref: '#/components/schemas/CustomerName'
+    V2Location:
+      type: object
+      required: [outletId, tableCode]
+      properties:
+        outletId:
+          $ref: '#/components/schemas/OutletIdValue'
+        tableCode:
+          $ref: '#/components/schemas/TableCodeValue'
+    V2PaymentSummary:
+      type: object
+      required: [totalAmount, paymentStatus, paymentMethod, amountTendered, change]
+      description: "`paymentMethod`, `amountTendered`, `change` are null until paid. `amountTendered` and `change` stay null for QRIS and CARD."
+      properties:
+        totalAmount:
+          type: integer
+          format: int64
+        paymentStatus:
+          $ref: '#/components/schemas/PaymentStatus'
+        paymentMethod:
+          oneOf:
+            - $ref: '#/components/schemas/PaymentMethod'
+            - type: 'null'
+        amountTendered:
+          type: [integer, 'null']
+          format: int64
+        change:
+          type: [integer, 'null']
+          format: int64
+    V2OrderRequest:
+      type: object
+      required: [customer, location, items]
+      description: |
+        Nested contract. Used for create and PUT.
+        On PUT, `location.outletId` must equal the order's current outlet, otherwise 400 `OUTLET_IMMUTABLE` (PRD D16).
+      properties:
+        customer:
+          $ref: '#/components/schemas/V2Customer'
+        location:
+          $ref: '#/components/schemas/V2Location'
+        items:
+          $ref: '#/components/schemas/OrderItemList'
+      example:
+        customer:
+          name: Budi
+        location:
+          outletId: OUT-01
+          tableCode: T-01
+        items:
+          - menuItemId: 11111111-0000-4000-8000-000000000001
+            quantity: 2
+    V2OrderResponse:
+      type: object
+      required: [id, orderNumber, status, customer, location, items, paymentSummary, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderNumber:
+          type: string
+          pattern: '^ORD-\d{4,}$'
+          examples: [ORD-0042]
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        customer:
+          $ref: '#/components/schemas/V2Customer'
+        location:
+          $ref: '#/components/schemas/V2Location'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemResponse'
+        paymentSummary:
+          $ref: '#/components/schemas/V2PaymentSummary'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      example:
+        id: 7d3c0d4e-2f7a-4f63-9a51-0b8c2f3e9a10
+        orderNumber: ORD-0042
+        status: PREPARING
+        customer:
+          name: Budi
+        location:
+          outletId: OUT-01
+          tableCode: T-01
+        items:
+          - menuItemId: 11111111-0000-4000-8000-000000000001
+            name: Mie Suit
+            unitPrice: 25000
+            quantity: 2
+            subtotal: 50000
+        paymentSummary:
+          totalAmount: 50000
+          paymentStatus: PAID
+          paymentMethod: CASH
+          amountTendered: 60000
+          change: 10000
+        createdAt: "2026-10-21T10:00:00Z"
+        updatedAt: "2026-10-21T10:03:12Z"
+
+    # ------------------------------------------------------------ Internal
+    InternalValidateRequest:
+      type: object
+      required: [outletId, tableCode, items]
+      properties:
+        outletId:
+          $ref: '#/components/schemas/OutletIdValue'
+        tableCode:
+          $ref: '#/components/schemas/TableCodeValue'
+        items:
+          type: array
+          minItems: 1
+          maxItems: 30
+          items:
+            $ref: '#/components/schemas/OrderItemRequest'
+    InternalValidateResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [menuItemId, name, unitPrice]
+            properties:
+              menuItemId:
+                type: string
+                format: uuid
+              name:
+                type: string
+              unitPrice:
+                type: integer
