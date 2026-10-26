@@ -1,4 +1,4 @@
-# API Specification — Dikichi Order Management Platform
+# API Specification: Dikichi Order Management Platform
 
 | Field | Value |
 | :--- | :--- |
@@ -27,8 +27,8 @@ This document explains the contract in `openapi.yaml`: conventions, access rules
 | Order number | `ORD-` + zero-padded sequence, at least 4 digits (`ORD-0042`, `ORD-12345`) | PRD §9.3 |
 | Soft delete | `DELETE` sets `is_deleted = true`. Deleted rows return `404` and never appear in lists | PRD §9.3 |
 | Create | `201 Created` with a `Location` header | PRD §11.4 |
-| Delete | `204 No Content`. Deleting an already-deleted resource returns `404` (D17) | — |
-| Paths | The gateway does not rewrite paths. Services expose the full `/api/v1/...` path, so springdoc output matches this spec (D19) | — |
+| Delete | `204 No Content`. Deleting an already-deleted resource returns `404` (D17) | - |
+| Paths | The gateway does not rewrite paths. Services expose the full `/api/v1/...` path, so springdoc output matches this spec (D19) | - |
 
 ## 2. Authentication
 
@@ -129,7 +129,7 @@ Allowed transitions (exhaustive, PRD §6.1):
 
 | From | To | Actor | Endpoint |
 | :--- | :--- | :--- | :--- |
-| — | `PENDING` | Guest | `POST /orders` |
+| - | `PENDING` | Guest | `POST /orders` |
 | `PENDING` | `ACCEPTED` | Cashier | `PATCH /status` |
 | `PENDING` | `CANCELLED` | Cashier | `PATCH /status` |
 | `ACCEPTED` | `CANCELLED` | Cashier | `PATCH /status` |

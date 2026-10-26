@@ -1,4 +1,4 @@
-# API Migration Guide — Orders `v1` → `v2`
+# API Migration Guide: Orders `v1` → `v2`
 
 | Field | Value |
 | :--- | :--- |
@@ -58,10 +58,10 @@ A change is breaking if an unmodified v1 client fails against v2. Two things fai
 | `tableCode` | `location.tableCode` | Moved |
 | `customerName` | `customer.name` | Moved |
 | `totalAmount` | `paymentSummary.totalAmount` | Moved |
-| — | `paymentSummary.paymentStatus` | **New.** `UNPAID` or `PAID` |
-| — | `paymentSummary.paymentMethod` | **New.** `CASH` / `QRIS` / `CARD`, null until paid |
-| — | `paymentSummary.amountTendered` | **New.** CASH only, otherwise null |
-| — | `paymentSummary.change` | **New.** CASH only, otherwise null |
+| - | `paymentSummary.paymentStatus` | **New.** `UNPAID` or `PAID` |
+| - | `paymentSummary.paymentMethod` | **New.** `CASH` / `QRIS` / `CARD`, null until paid |
+| - | `paymentSummary.amountTendered` | **New.** CASH only, otherwise null |
+| - | `paymentSummary.change` | **New.** CASH only, otherwise null |
 | `items[]` | `items[]` | **Unchanged**: `{ menuItemId, name, unitPrice, quantity, subtotal }` |
 | `createdAt`, `updatedAt` | `createdAt`, `updatedAt` | Unchanged |
 

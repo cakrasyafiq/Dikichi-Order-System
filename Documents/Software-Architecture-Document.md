@@ -1,4 +1,4 @@
-# Software Architecture Document — Dikichi Order Management Platform
+# Software Architecture Document: Dikichi Order Management Platform
 
 | Field | Value |
 | :--- | :--- |

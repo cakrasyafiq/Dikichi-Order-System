@@ -1,4 +1,4 @@
-# Database Design and Data Dictionary — Dikichi Order Management Platform
+# Database Design and Data Dictionary: Dikichi Order Management Platform
 
 | Field | Value |
 | :--- | :--- |
@@ -72,9 +72,9 @@ erDiagram
 
 | Column | Type | Null | Default | Constraint / Note |
 | :--- | :--- | :---: | :--- | :--- |
-| `id` | `VARCHAR(20)` | N | — | PK. Human-readable key (D7). Check `^OUT-[0-9]{2,}$` (PRD D17) |
-| `name` | `VARCHAR(100)` | N | — | Length fixed by PRD D17 |
-| `address` | `VARCHAR(255)` | N | — | Length 1–255 and NOT NULL (PRD D17) |
+| `id` | `VARCHAR(20)` | N | - | PK. Human-readable key (D7). Check `^OUT-[0-9]{2,}$` (PRD D17) |
+| `name` | `VARCHAR(100)` | N | - | Length fixed by PRD D17 |
+| `address` | `VARCHAR(255)` | N | - | Length 1–255 and NOT NULL (PRD D17) |
 | `is_deleted` | `BOOLEAN` | N | `false` | Soft delete |
 | `created_at` | `TIMESTAMPTZ` | N | `now()` | |
 | `updated_at` | `TIMESTAMPTZ` | N | `now()` | Set by the application on update |
@@ -84,22 +84,22 @@ erDiagram
 | Column | Type | Null | Default | Constraint / Note |
 | :--- | :--- | :---: | :--- | :--- |
 | `id` | `UUID` | N | `gen_random_uuid()` | PK |
-| `outlet_id` | `VARCHAR(20)` | N | — | FK → `outlet(id)` |
-| `code` | `VARCHAR(5)` | N | — | Check `^T-[0-9]{2,3}$` |
+| `outlet_id` | `VARCHAR(20)` | N | - | FK → `outlet(id)` |
+| `code` | `VARCHAR(5)` | N | - | Check `^T-[0-9]{2,3}$` |
 | `is_deleted` | `BOOLEAN` | N | `false` | |
 | `created_at` | `TIMESTAMPTZ` | N | `now()` | |
-| — | — | — | — | Partial unique index on `(outlet_id, code) WHERE is_deleted = false`. A code can be reused after deletion |
+| - | - | - | - | Partial unique index on `(outlet_id, code) WHERE is_deleted = false`. A code can be reused after deletion |
 
 **`menu_item`**
 
 | Column | Type | Null | Default | Constraint / Note |
 | :--- | :--- | :---: | :--- | :--- |
 | `id` | `UUID` | N | `gen_random_uuid()` | PK |
-| `outlet_id` | `VARCHAR(20)` | N | — | FK → `outlet(id)`. Indexed (PRD §13) |
-| `name` | `VARCHAR(100)` | N | — | 1–100 chars |
-| `description` | `VARCHAR(500)` | Y | — | Nullable (PRD D24) |
-| `price` | `INTEGER` | N | — | Check `1..10,000,000` |
-| `category` | `VARCHAR(50)` | N | — | Free text, 1–50 chars |
+| `outlet_id` | `VARCHAR(20)` | N | - | FK → `outlet(id)`. Indexed (PRD §13) |
+| `name` | `VARCHAR(100)` | N | - | 1–100 chars |
+| `description` | `VARCHAR(500)` | Y | - | Nullable (PRD D24) |
+| `price` | `INTEGER` | N | - | Check `1..10,000,000` |
+| `category` | `VARCHAR(50)` | N | - | Free text, 1–50 chars |
 | `available` | `BOOLEAN` | N | `true` | Toggled by `PATCH /availability` |
 | `is_deleted` | `BOOLEAN` | N | `false` | |
 | `created_at` / `updated_at` | `TIMESTAMPTZ` | N | `now()` | |
@@ -109,10 +109,10 @@ erDiagram
 | Column | Type | Null | Default | Constraint / Note |
 | :--- | :--- | :---: | :--- | :--- |
 | `id` | `UUID` | N | `gen_random_uuid()` | PK |
-| `username` | `VARCHAR(50)` | N | — | Unique |
-| `password_hash` | `VARCHAR(100)` | N | — | BCrypt (60 chars). Never logged or returned |
-| `role` | `VARCHAR(10)` | N | — | Check `IN ('MASTER','CASHIER','KITCHEN')` |
-| `outlet_id` | `VARCHAR(20)` | Y | — | FK → `outlet(id)`. Check: `outlet_id IS NULL` if and only if `role = 'MASTER'` (PRD D24) |
+| `username` | `VARCHAR(50)` | N | - | Unique |
+| `password_hash` | `VARCHAR(100)` | N | - | BCrypt (60 chars). Never logged or returned |
+| `role` | `VARCHAR(10)` | N | - | Check `IN ('MASTER','CASHIER','KITCHEN')` |
+| `outlet_id` | `VARCHAR(20)` | Y | - | FK → `outlet(id)`. Check: `outlet_id IS NULL` if and only if `role = 'MASTER'` (PRD D24) |
 
 ## 3. `order_db` (owned by `order-service`)
 
@@ -162,41 +162,41 @@ erDiagram
 | Column | Type | Null | Default | Constraint / Note |
 | :--- | :--- | :---: | :--- | :--- |
 | `id` | `UUID` | N | `gen_random_uuid()` | PK |
-| `order_number` | `VARCHAR(20)` | N | — | Unique. `ORD-` + sequence, at least 4 digits (§3.4) |
-| `outlet_id` | `VARCHAR(20)` | N | — | Validated via catalog. No FK |
-| `table_code` | `VARCHAR(5)` | N | — | Validated via catalog. No FK |
-| `customer_name` | `VARCHAR(50)` | N | — | Trimmed, 1–50 chars |
-| `status` | `VARCHAR(10)` | N | — | Check `IN ('PENDING','ACCEPTED','PREPARING','READY','COMPLETED','CANCELLED')` |
-| `total_amount` | `BIGINT` | N | — | `sum(order_item.subtotal)`. Check `> 0` |
+| `order_number` | `VARCHAR(20)` | N | - | Unique. `ORD-` + sequence, at least 4 digits (§3.4) |
+| `outlet_id` | `VARCHAR(20)` | N | - | Validated via catalog. No FK |
+| `table_code` | `VARCHAR(5)` | N | - | Validated via catalog. No FK |
+| `customer_name` | `VARCHAR(50)` | N | - | Trimmed, 1–50 chars |
+| `status` | `VARCHAR(10)` | N | - | Check `IN ('PENDING','ACCEPTED','PREPARING','READY','COMPLETED','CANCELLED')` |
+| `total_amount` | `BIGINT` | N | - | `sum(order_item.subtotal)`. Check `> 0` |
 | `version` | `BIGINT` | N | `0` | JPA `@Version`. A lost race returns `409 CONCURRENT_MODIFICATION` |
 | `created_at` / `updated_at` | `TIMESTAMPTZ` | N | `now()` | Queue ordering uses `created_at ASC` |
-| — | — | — | — | Index `(outlet_id, status)` (PRD §13) |
+| - | - | - | - | Index `(outlet_id, status)` (PRD §13) |
 
 **`order_item`**
 
 | Column | Type | Null | Default | Constraint / Note |
 | :--- | :--- | :---: | :--- | :--- |
 | `id` | `UUID` | N | `gen_random_uuid()` | PK |
-| `order_id` | `UUID` | N | — | FK → `orders(id)` |
-| `menu_item_id` | `UUID` | N | — | Plain value from the catalog |
-| `menu_item_name_snapshot` | `VARCHAR(100)` | N | — | Copied from the catalog at create/`PUT` |
-| `unit_price_snapshot` | `INTEGER` | N | — | Copied from the catalog. Check `1..10,000,000` |
-| `quantity` | `INTEGER` | N | — | Check `1..99` |
-| `subtotal` | `BIGINT` | N | — | `unit_price_snapshot * quantity`. Check enforces it (PRD D24) |
-| — | — | — | — | Unique `(order_id, menu_item_id)` (PRD D24). Duplicate lines are rejected at the API (`400`), and this is a second guard |
+| `order_id` | `UUID` | N | - | FK → `orders(id)` |
+| `menu_item_id` | `UUID` | N | - | Plain value from the catalog |
+| `menu_item_name_snapshot` | `VARCHAR(100)` | N | - | Copied from the catalog at create/`PUT` |
+| `unit_price_snapshot` | `INTEGER` | N | - | Copied from the catalog. Check `1..10,000,000` |
+| `quantity` | `INTEGER` | N | - | Check `1..99` |
+| `subtotal` | `BIGINT` | N | - | `unit_price_snapshot * quantity`. Check enforces it (PRD D24) |
+| - | - | - | - | Unique `(order_id, menu_item_id)` (PRD D24). Duplicate lines are rejected at the API (`400`), and this is a second guard |
 
 **`mock_payment`**
 
 | Column | Type | Null | Default | Constraint / Note |
 | :--- | :--- | :---: | :--- | :--- |
 | `id` | `UUID` | N | `gen_random_uuid()` | PK |
-| `order_id` | `UUID` | N | — | FK → `orders(id)`. **Unique**, so an order cannot be paid twice (PRD §13) |
-| `payment_method` | `VARCHAR(5)` | N | — | Check `IN ('CASH','QRIS','CARD')` |
-| `amount_tendered` | `BIGINT` | Y | — | CASH only, ≥ `amount_paid` |
-| `change_amount` | `BIGINT` | Y | — | CASH only, `= amount_tendered − amount_paid`. Exposed as `change` in v2 |
-| `amount_paid` | `BIGINT` | N | — | Equals `orders.total_amount` |
+| `order_id` | `UUID` | N | - | FK → `orders(id)`. **Unique**, so an order cannot be paid twice (PRD §13) |
+| `payment_method` | `VARCHAR(5)` | N | - | Check `IN ('CASH','QRIS','CARD')` |
+| `amount_tendered` | `BIGINT` | Y | - | CASH only, ≥ `amount_paid` |
+| `change_amount` | `BIGINT` | Y | - | CASH only, `= amount_tendered − amount_paid`. Exposed as `change` in v2 |
+| `amount_paid` | `BIGINT` | N | - | Equals `orders.total_amount` |
 | `paid_at` | `TIMESTAMPTZ` | N | `now()` | |
-| — | — | — | — | Check: CASH requires both nullable columns; QRIS/CARD require both to be null (PRD D24) |
+| - | - | - | - | Check: CASH requires both nullable columns; QRIS/CARD require both to be null (PRD D24) |
 
 ### 3.3 Integrity guarantees
 
@@ -237,7 +237,7 @@ Rules:
 
 ## 5. DDL
 
-### 5.1 `catalog_db` — `V1__create_catalog_schema.sql`
+### 5.1 `catalog_db`: `V1__create_catalog_schema.sql`
 
 ```sql
 CREATE TABLE outlet (
@@ -294,7 +294,7 @@ CREATE TABLE staff_user (
 );
 ```
 
-### 5.2 `order_db` — `V1__create_order_schema.sql`
+### 5.2 `order_db`: `V1__create_order_schema.sql`
 
 ```sql
 CREATE SEQUENCE order_number_seq START WITH 1 INCREMENT BY 1;
@@ -361,7 +361,7 @@ The unique constraint on `(order_id, menu_item_id)` already creates an index tha
 
 PRD minimum: 1 outlet `OUT-01`, 20 tables `T-01`–`T-20`, 10–15 menu items in at least 3 categories, and 3 staff accounts.
 
-### 6.1 Outlet and tables — part of `V2__seed_outlet_tables_menu.sql`
+### 6.1 Outlet and tables: part of `V2__seed_outlet_tables_menu.sql`
 
 ```sql
 INSERT INTO outlet (id, name, address)
@@ -414,7 +414,7 @@ INSERT INTO menu_item (id, outlet_id, name, description, price, category, availa
 ('11111111-0000-4000-8000-000000000012', 'OUT-01', 'Air Mineral',         NULL,  5000, 'Minuman', TRUE);
 ```
 
-### 6.3 Staff accounts — `V3__seed_staff_users.sql`
+### 6.3 Staff accounts: `V3__seed_staff_users.sql`
 
 | Username | Role | Outlet |
 | :--- | :--- | :--- |

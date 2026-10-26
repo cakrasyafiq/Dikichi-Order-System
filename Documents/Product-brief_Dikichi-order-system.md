@@ -1,4 +1,4 @@
-# Product Brief — Dikichi Order Management Platform
+# Product Brief: Dikichi Order Management Platform
 
 **Document status:** Historical baseline; PRD v1.1 and its Decision Log supersede this brief  
 **Version:** 1.0  
@@ -159,7 +159,7 @@ Both versions reuse the same domain service layer while mapping to distinct DTO 
 
 - **`/api/v1/orders` (Legacy Contract):**
   - **Request & Response:** Uses flat location/customer attributes (`outletId`, `tableCode`, `customerName`) and a single integer `totalAmount`.
-- **`/api/v2/orders` (Current Contract — Breaking Change):**
+- **`/api/v2/orders` (Current Contract, Breaking Change):**
   - **Request & Response:** Replaces flat fields with structured nested objects:
     - `customer: { name: string }`
     - `location: { outletId: string, tableCode: string }`
