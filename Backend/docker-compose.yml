@@ -1,0 +1,118 @@
+name: dikichi
+
+services:
+  catalog-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: catalog_db
+      POSTGRES_USER: ${CATALOG_DB_USER:?CATALOG_DB_USER is required}
+      POSTGRES_PASSWORD: ${CATALOG_DB_PASSWORD:?CATALOG_DB_PASSWORD is required}
+    volumes:
+      - catalog-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d catalog_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [dikichi]
+
+  order-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: order_db
+      POSTGRES_USER: ${ORDER_DB_USER:?ORDER_DB_USER is required}
+      POSTGRES_PASSWORD: ${ORDER_DB_PASSWORD:?ORDER_DB_PASSWORD is required}
+    volumes:
+      - order-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d order_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [dikichi]
+
+  catalog-service:
+    build: ./catalog-service
+    image: ghcr.io/${GHCR_OWNER:-local}/dikichi-catalog-service:${IMAGE_TAG:-latest}
+    environment:
+      CATALOG_DB_URL: jdbc:postgresql://catalog-db:5432/catalog_db
+      CATALOG_DB_USER: ${CATALOG_DB_USER}
+      CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      SEED_MASTER_PASSWORD: ${SEED_MASTER_PASSWORD:?SEED_MASTER_PASSWORD is required}
+      SEED_CASHIER_PASSWORD: ${SEED_CASHIER_PASSWORD:?SEED_CASHIER_PASSWORD is required}
+      SEED_KITCHEN_PASSWORD: ${SEED_KITCHEN_PASSWORD:?SEED_KITCHEN_PASSWORD is required}
+    expose:
+      - "8081"
+    depends_on:
+      catalog-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8081/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+    networks: [dikichi]
+
+  order-service:
+    build: ./order-service
+    image: ghcr.io/${GHCR_OWNER:-local}/dikichi-order-service:${IMAGE_TAG:-latest}
+    environment:
+      ORDER_DB_URL: jdbc:postgresql://order-db:5432/order_db
+      ORDER_DB_USER: ${ORDER_DB_USER}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD}
+      CATALOG_BASE_URL: http://catalog-service:8081
+    expose:
+      - "8082"
+    depends_on:
+      order-db:
+        condition: service_healthy
+      catalog-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8082/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+    networks: [dikichi]
+
+  gateway-service:
+    build: ./gateway-service
+    image: ghcr.io/${GHCR_OWNER:-local}/dikichi-gateway-service:${IMAGE_TAG:-latest}
+    environment:
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      CATALOG_BASE_URL: http://catalog-service:8081
+      ORDER_BASE_URL: http://order-service:8082
+    ports:
+      - "8080:8080"
+    depends_on:
+      catalog-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+    networks: [dikichi]
+
+  frontend:
+    build: ../Frontend
+    image: ghcr.io/${GHCR_OWNER:-local}/dikichi-frontend:${IMAGE_TAG:-latest}
+    ports:
+      - "80:80"
+    depends_on:
+      gateway-service:
+        condition: service_healthy
+    networks: [dikichi]
+
+volumes:
+  catalog-data:
+  order-data:
+
+networks:
+  dikichi:

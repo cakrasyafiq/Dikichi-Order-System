@@ -1,0 +1,35 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: catalog-service
+  datasource:
+    url: ${CATALOG_DB_URL}
+    username: ${CATALOG_DB_USER}
+    password: ${CATALOG_DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    placeholders:
+      seed_master_password: ${SEED_MASTER_PASSWORD}
+      seed_cashier_password: ${SEED_CASHIER_PASSWORD}
+      seed_kitchen_password: ${SEED_KITCHEN_PASSWORD}
+
+dikichi:
+  jwt:
+    secret: ${JWT_SECRET}
+    expires-in-seconds: 28800
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+logging:
+  structured:
+    format:
+      console: ecs
