@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.ambatucode.dikichi.order.service.OrderStateMachineTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.147 s -- in com.ambatucode.dikichi.order.service.OrderStateMachineTest

@@ -44,6 +44,10 @@ public class DiningTable {
         createdAt = Instant.now().truncatedTo(ChronoUnit.SECONDS);
     }
 
+    public void markDeleted() {
+        this.deleted = true;
+    }
+
     public UUID getId() {
         return id;
     }

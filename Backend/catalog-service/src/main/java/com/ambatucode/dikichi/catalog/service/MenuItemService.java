@@ -1,7 +1,9 @@
 package com.ambatucode.dikichi.catalog.service;
 
 import com.ambatucode.dikichi.catalog.config.CallerContext;
+import com.ambatucode.dikichi.catalog.dto.AvailabilityPatchRequest;
 import com.ambatucode.dikichi.catalog.dto.MenuItemCreateRequest;
+import com.ambatucode.dikichi.catalog.dto.MenuItemReplaceRequest;
 import com.ambatucode.dikichi.catalog.dto.MenuItemResponse;
 import com.ambatucode.dikichi.catalog.entity.MenuItem;
 import com.ambatucode.dikichi.catalog.entity.Role;
@@ -49,6 +51,35 @@ public class MenuItemService {
         MenuItem item = new MenuItem(outletId, request.name().strip(), request.description(), request.price(),
                 request.category().strip(), request.availableOrDefault());
         return CatalogMapper.toResponse(menuItems.save(item));
+    }
+
+    @Transactional
+    public MenuItemResponse replace(UUID menuItemId, MenuItemReplaceRequest request) {
+        caller.requireRole(Role.MASTER);
+        MenuItem item = requireActiveItem(menuItemId);
+        item.replace(request.name().strip(), request.description(), request.price(),
+                request.category().strip(), request.available());
+        return CatalogMapper.toResponse(item);
+    }
+
+    @Transactional
+    public MenuItemResponse changeAvailability(UUID menuItemId, AvailabilityPatchRequest request) {
+        caller.requireRole(Role.MASTER, Role.CASHIER, Role.KITCHEN);
+        MenuItem item = requireActiveItem(menuItemId);
+        caller.requireSameOutlet(item.getOutletId());
+        item.changeAvailability(request.available());
+        return CatalogMapper.toResponse(item);
+    }
+
+    @Transactional
+    public void delete(UUID menuItemId) {
+        caller.requireRole(Role.MASTER);
+        requireActiveItem(menuItemId).markDeleted();
+    }
+
+    private MenuItem requireActiveItem(UUID menuItemId) {
+        return menuItems.findByIdAndDeletedFalse(menuItemId)
+                .orElseThrow(() -> ApiException.notFound("Menu item not found"));
     }
 
     private void requireActiveOutlet(String outletId) {

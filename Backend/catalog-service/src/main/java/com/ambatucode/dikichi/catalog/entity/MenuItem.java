@@ -71,6 +71,22 @@ public class MenuItem {
         updatedAt = Instant.now().truncatedTo(ChronoUnit.SECONDS);
     }
 
+    public void replace(String name, String description, int price, String category, boolean available) {
+        this.name = name;
+        this.description = description;
+        this.price = price;
+        this.category = category;
+        this.available = available;
+    }
+
+    public void changeAvailability(boolean available) {
+        this.available = available;
+    }
+
+    public void markDeleted() {
+        this.deleted = true;
+    }
+
     public UUID getId() {
         return id;
     }

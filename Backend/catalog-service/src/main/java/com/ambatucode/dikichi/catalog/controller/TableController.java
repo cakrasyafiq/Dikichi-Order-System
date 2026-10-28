@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,5 +36,11 @@ public class TableController {
         TableResponse created = tableService.create(outletId, request);
         URI location = URI.create("/api/v1/outlets/" + outletId + "/tables/" + created.code());
         return ResponseEntity.created(location).body(created);
+    }
+
+    @DeleteMapping("/{code}")
+    public ResponseEntity<Void> delete(@PathVariable String outletId, @PathVariable String code) {
+        tableService.delete(outletId, code);
+        return ResponseEntity.noContent().build();
     }
 }

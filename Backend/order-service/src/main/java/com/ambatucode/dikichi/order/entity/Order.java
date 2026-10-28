@@ -89,6 +89,21 @@ public class Order {
         totalAmount += item.getSubtotal();
     }
 
+    public void removeAllItems() {
+        items.clear();
+    }
+
+    public void replaceContents(String tableCode, String customerName, List<OrderItem> newItems) {
+        this.tableCode = tableCode;
+        this.customerName = customerName;
+        this.totalAmount = 0;
+        newItems.forEach(this::addItem);
+    }
+
+    public void changeStatus(OrderStatus target) {
+        this.status = target;
+    }
+
     public void markPreparing() {
         this.status = OrderStatus.PREPARING;
     }

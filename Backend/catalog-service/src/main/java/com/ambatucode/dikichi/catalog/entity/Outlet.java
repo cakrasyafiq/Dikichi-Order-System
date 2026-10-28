@@ -52,6 +52,15 @@ public class Outlet {
         updatedAt = Instant.now().truncatedTo(ChronoUnit.SECONDS);
     }
 
+    public void replace(String name, String address) {
+        this.name = name;
+        this.address = address;
+    }
+
+    public void markDeleted() {
+        this.deleted = true;
+    }
+
     public String getId() {
         return id;
     }

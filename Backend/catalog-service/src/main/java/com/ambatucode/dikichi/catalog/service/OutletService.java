@@ -3,6 +3,7 @@ package com.ambatucode.dikichi.catalog.service;
 import com.ambatucode.dikichi.catalog.config.CallerContext;
 import com.ambatucode.dikichi.catalog.dto.ErrorDetail;
 import com.ambatucode.dikichi.catalog.dto.OutletCreateRequest;
+import com.ambatucode.dikichi.catalog.dto.OutletReplaceRequest;
 import com.ambatucode.dikichi.catalog.dto.OutletResponse;
 import com.ambatucode.dikichi.catalog.entity.Outlet;
 import com.ambatucode.dikichi.catalog.entity.Role;
@@ -44,6 +45,20 @@ public class OutletService {
         }
         Outlet saved = outlets.save(new Outlet(request.id(), request.name().strip(), request.address().strip()));
         return CatalogMapper.toResponse(saved);
+    }
+
+    @Transactional
+    public OutletResponse replace(String outletId, OutletReplaceRequest request) {
+        caller.requireRole(Role.MASTER);
+        Outlet outlet = requireActive(outletId);
+        outlet.replace(request.name().strip(), request.address().strip());
+        return CatalogMapper.toResponse(outlet);
+    }
+
+    @Transactional
+    public void delete(String outletId) {
+        caller.requireRole(Role.MASTER);
+        requireActive(outletId).markDeleted();
     }
 
     Outlet requireActive(String outletId) {

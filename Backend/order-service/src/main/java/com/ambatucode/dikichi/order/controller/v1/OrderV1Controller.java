@@ -1,5 +1,6 @@
 package com.ambatucode.dikichi.order.controller.v1;
 
+import com.ambatucode.dikichi.order.dto.common.OrderStatusPatchRequest;
 import com.ambatucode.dikichi.order.dto.common.PaymentRequest;
 import com.ambatucode.dikichi.order.dto.v1.V1OrderRequest;
 import com.ambatucode.dikichi.order.dto.v1.V1OrderResponse;
@@ -14,8 +15,10 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -54,5 +57,16 @@ public class OrderV1Controller {
     @PostMapping("/{orderId}/pay")
     public V1OrderResponse pay(@PathVariable UUID orderId, @Valid @RequestBody PaymentRequest request) {
         return OrderV1Mapper.toResponse(paymentService.pay(orderId, request));
+    }
+
+    @PutMapping("/{orderId}")
+    public V1OrderResponse replace(@PathVariable UUID orderId, @Valid @RequestBody V1OrderRequest request) {
+        return OrderV1Mapper.toResponse(orderService.replace(orderId, OrderV1Mapper.toCommand(request)));
+    }
+
+    @PatchMapping("/{orderId}/status")
+    public V1OrderResponse updateStatus(@PathVariable UUID orderId,
+                                        @RequestBody OrderStatusPatchRequest request) {
+        return OrderV1Mapper.toResponse(orderService.updateStatus(orderId, request));
     }
 }

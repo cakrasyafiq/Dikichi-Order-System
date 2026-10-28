@@ -46,6 +46,15 @@ public class TableService {
         return CatalogMapper.toResponse(tables.save(new DiningTable(outletId, request.code())));
     }
 
+    @Transactional
+    public void delete(String outletId, String code) {
+        caller.requireRole(Role.MASTER);
+        requireActiveOutlet(outletId);
+        tables.findByOutletIdAndCodeAndDeletedFalse(outletId, code)
+                .orElseThrow(() -> ApiException.notFound("Table not found"))
+                .markDeleted();
+    }
+
     private void requireActiveOutlet(String outletId) {
         outlets.findByIdAndDeletedFalse(outletId).orElseThrow(() -> ApiException.notFound("Outlet not found"));
     }
