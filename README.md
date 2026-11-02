@@ -89,6 +89,45 @@ docker run --rm -v "${PWD}:/w" -v dikichi-m2:/root/.m2 -w /w maven:3.9-eclipse-t
 
 Hasil yang benar: `Tests run: 4, Failures: 0, Errors: 0` dan `BUILD SUCCESS`. Folder `target/` yang muncul tidak perlu dikumpulkan dan diabaikan Git.
 
+## 5. Pengujian GET dan POST (Progres 7)
+
+Ada tiga lapis pengujian. Semuanya dijalankan dari folder `Backend`.
+
+### a. Uji unit (JUnit 5 + Mockito)
+
+Tidak membutuhkan sistem yang menyala. Jalankan di PowerShell:
+
+```powershell
+cd order-service
+docker run --rm -v "${PWD}:/w" -v dikichi-m2:/root/.m2 -w /w maven:3.9-eclipse-temurin-21 mvn -B test
+cd ../catalog-service
+docker run --rm -v "${PWD}:/w" -v dikichi-m2:/root/.m2 -w /w maven:3.9-eclipse-temurin-21 mvn -B test
+cd ..
+```
+
+Hasil yang diharapkan di akhir keluaran masing-masing:
+
+| Layanan | Hasil yang diharapkan |
+| :--- | :--- |
+| order-service | `Tests run: 29, Failures: 0, Errors: 0, Skipped: 0` dan `BUILD SUCCESS` |
+| catalog-service | `Tests run: 31, Failures: 0, Errors: 0, Skipped: 0` dan `BUILD SUCCESS` |
+
+### b. Uji API black-box (Newman)
+
+Membutuhkan sistem yang sudah menyala dan `healthy` (lihat bagian 2). Jalankan di PowerShell:
+
+```powershell
+./tests/api/run-newman.ps1
+```
+
+Skrip membaca kata sandi seed dari `.env` dan menjalankan koleksi `tests/api/dikichi-v1-get-post.postman_collection.json` lewat Docker. Koleksi berisi 60 request dan 262 asersi (status, kode kesalahan, format respons, header `Location`, bentuk data, waktu respons). Hasil yang diharapkan pada tabel ringkasan Newman: kolom `failed` bernilai 0 pada baris requests dan assertions.
+
+Koleksi bisa dijalankan berulang kali karena ID outlet uji dibuat acak. Data uji tetap tersimpan di basis data.
+
+### c. Skrip smoke test
+
+Lihat bagian 3. Hanya boleh dijalankan sekali per basis data.
+
 ## Reset dan berhenti
 
 ```powershell
@@ -152,6 +191,7 @@ Dikichi-Order-System/
   Backend/
     docker-compose.yml
     scripts/smoke-test.sh
+    tests/api/          koleksi Newman dan skrip penjalan
     gateway-service/
     catalog-service/
     order-service/
