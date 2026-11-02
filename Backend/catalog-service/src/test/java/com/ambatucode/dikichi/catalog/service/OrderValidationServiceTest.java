@@ -50,6 +50,10 @@ class OrderValidationServiceTest {
         return item;
     }
 
+    private void stubMenuItems(MenuItem... items) {
+        when(menuItems.findByIdInAndDeletedFalse(any())).thenReturn(List.of(items));
+    }
+
     private static InternalValidateRequest request(UUID... ids) {
         List<Line> lines = java.util.Arrays.stream(ids).map(id -> new Line(id, 1)).toList();
         return new InternalValidateRequest("OUT-01", "T-01", lines);
@@ -77,9 +81,9 @@ class OrderValidationServiceTest {
 
     @Test
     void itemsOfAnotherOutletAreTreatedAsMissing() {
-        when(menuItems.findByIdInAndDeletedFalse(any())).thenReturn(List.of(
+        stubMenuItems(
                 menuItem(mieId, "OUT-01", "Mie Suit", 25000, true),
-                menuItem(tehId, "OUT-02", "Es Teh", 6000, true)));
+                menuItem(tehId, "OUT-02", "Es Teh", 6000, true));
 
         ApiException error = assertApiError(() -> service.validate(request(mieId, tehId)));
 
@@ -90,10 +94,10 @@ class OrderValidationServiceTest {
 
     @Test
     void everyUnavailableItemIsReportedAtOnce() {
-        when(menuItems.findByIdInAndDeletedFalse(any())).thenReturn(List.of(
+        stubMenuItems(
                 menuItem(mieId, "OUT-01", "Mie Suit", 25000, false),
                 menuItem(tehId, "OUT-01", "Es Teh", 6000, true),
-                menuItem(lumpiaId, "OUT-01", "Lumpia", 19000, false)));
+                menuItem(lumpiaId, "OUT-01", "Lumpia", 19000, false));
 
         ApiException error = assertApiError(() -> service.validate(request(mieId, tehId, lumpiaId)));
 
@@ -105,8 +109,8 @@ class OrderValidationServiceTest {
 
     @Test
     void missingItemTakesPrecedenceOverUnavailableItem() {
-        when(menuItems.findByIdInAndDeletedFalse(any())).thenReturn(List.of(
-                menuItem(mieId, "OUT-01", "Mie Suit", 25000, false)));
+        stubMenuItems(
+                menuItem(mieId, "OUT-01", "Mie Suit", 25000, false));
 
         ApiException error = assertApiError(() -> service.validate(request(mieId, tehId)));
 
@@ -115,9 +119,9 @@ class OrderValidationServiceTest {
 
     @Test
     void validRequestReturnsNamesAndPricesInRequestOrder() {
-        when(menuItems.findByIdInAndDeletedFalse(any())).thenReturn(List.of(
+        stubMenuItems(
                 menuItem(mieId, "OUT-01", "Mie Suit", 25000, true),
-                menuItem(tehId, "OUT-01", "Es Teh Manis", 6000, true)));
+                menuItem(tehId, "OUT-01", "Es Teh Manis", 6000, true));
 
         InternalValidateResponse response = service.validate(request(tehId, mieId));
 

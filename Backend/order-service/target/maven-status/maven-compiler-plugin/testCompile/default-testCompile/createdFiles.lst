@@ -1,1 +1,4 @@
+com/ambatucode/dikichi/order/service/PaymentServiceTest.class
+com/ambatucode/dikichi/order/service/OrderServiceTest.class
+com/ambatucode/dikichi/order/support/ApiAssertions.class
 com/ambatucode/dikichi/order/service/OrderStateMachineTest.class
