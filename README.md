@@ -130,14 +130,17 @@ Lihat bagian 3. Hanya boleh dijalankan sekali per basis data.
 
 ## Reset dan berhenti
 
+Reset total (menghapus kontainer dan data basis data, lalu menjalankan ulang):
+
 ```powershell
 cd Backend
-
-# Reset total: hapus kontainer dan data basis data, lalu jalankan ulang
 docker compose --env-file ../.env down -v
 docker compose --env-file ../.env up -d --build gateway-service
+```
 
-# Berhenti tanpa menghapus data
+Berhenti tanpa menghapus data:
+
+```powershell
 docker compose --env-file ../.env down
 ```
 
