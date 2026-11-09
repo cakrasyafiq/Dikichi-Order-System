@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.ambatucode.dikichi.catalog.config.CallerContext;
 import com.ambatucode.dikichi.catalog.dto.OutletCreateRequest;
+import com.ambatucode.dikichi.catalog.dto.OutletReplaceRequest;
 import com.ambatucode.dikichi.catalog.dto.OutletResponse;
 import com.ambatucode.dikichi.catalog.entity.Outlet;
 import com.ambatucode.dikichi.catalog.entity.Role;
@@ -98,5 +99,82 @@ class OutletServiceTest {
 
         assertThat(error.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(error.getCode()).isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    void masterReplacesOutletWithTrimmedFields() {
+        caller.populate(Role.MASTER, null);
+        Outlet existing = new Outlet("OUT-01", "Lama", "Alamat Lama");
+        when(outlets.findByIdAndDeletedFalse("OUT-01")).thenReturn(Optional.of(existing));
+
+        OutletResponse response = service.replace("OUT-01",
+                new OutletReplaceRequest("  Dikichi Baru  ", "  Jl. Baru No. 2  "));
+
+        assertThat(response.id()).isEqualTo("OUT-01");
+        assertThat(response.name()).isEqualTo("Dikichi Baru");
+        assertThat(response.address()).isEqualTo("Jl. Baru No. 2");
+    }
+
+    @Test
+    void replacingUnknownOutletReturnsNotFound() {
+        caller.populate(Role.MASTER, null);
+        when(outlets.findByIdAndDeletedFalse("OUT-404")).thenReturn(Optional.empty());
+
+        ApiException error = assertApiError(() -> service.replace("OUT-404",
+                new OutletReplaceRequest("Nama", "Alamat")));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(error.getCode()).isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    void nonMasterCannotReplaceOutlet() {
+        caller.populate(Role.CASHIER, "OUT-01");
+
+        ApiException error = assertApiError(() -> service.replace("OUT-01",
+                new OutletReplaceRequest("Nama", "Alamat")));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(error.getCode()).isEqualTo("FORBIDDEN");
+    }
+
+    @Test
+    void anonymousCallerCannotReplaceOutlet() {
+        ApiException error = assertApiError(() -> service.replace("OUT-01",
+                new OutletReplaceRequest("Nama", "Alamat")));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void masterDeletesOutletWithSoftDelete() {
+        caller.populate(Role.MASTER, null);
+        Outlet existing = new Outlet("OUT-01", "Dikichi 01", "Jl. A");
+        when(outlets.findByIdAndDeletedFalse("OUT-01")).thenReturn(Optional.of(existing));
+
+        service.delete("OUT-01");
+
+        assertThat(existing.isDeleted()).isTrue();
+    }
+
+    @Test
+    void deletingUnknownOutletReturnsNotFound() {
+        caller.populate(Role.MASTER, null);
+        when(outlets.findByIdAndDeletedFalse("OUT-404")).thenReturn(Optional.empty());
+
+        ApiException error = assertApiError(() -> service.delete("OUT-404"));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(error.getCode()).isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    void nonMasterCannotDeleteOutlet() {
+        caller.populate(Role.KITCHEN, "OUT-01");
+
+        ApiException error = assertApiError(() -> service.delete("OUT-01"));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(error.getCode()).isEqualTo("FORBIDDEN");
     }
 }

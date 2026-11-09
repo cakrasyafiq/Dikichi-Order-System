@@ -1,6 +1,10 @@
 param(
-    [string]$BaseUrl = "http://host.docker.internal:8080"
+    [string]$BaseUrl = "http://host.docker.internal:8080",
+    [string]$Collection = "dikichi-v1-get-post.postman_collection.json"
 )
+
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
 $envFile = Join-Path $PSScriptRoot "../../../.env"
 if (-not (Test-Path $envFile)) {
@@ -13,7 +17,7 @@ Get-Content $envFile | ForEach-Object {
     if ($_ -match '^\s*([A-Z_]+)=(.*)$') { $values[$Matches[1]] = $Matches[2] }
 }
 
-docker run --rm -v "${PSScriptRoot}:/etc/newman" postman/newman:alpine run dikichi-v1-get-post.postman_collection.json `
+docker run --rm -v "${PSScriptRoot}:/etc/newman" postman/newman:alpine run $Collection `
     --env-var "baseUrl=$BaseUrl" `
     --env-var "masterPassword=$($values['SEED_MASTER_PASSWORD'])" `
     --env-var "cashierPassword=$($values['SEED_CASHIER_PASSWORD'])" `

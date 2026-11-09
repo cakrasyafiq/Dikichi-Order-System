@@ -89,13 +89,13 @@ docker run --rm -v "${PWD}:/w" -v dikichi-m2:/root/.m2 -w /w maven:3.9-eclipse-t
 
 Hasil yang benar: `Tests run: 4, Failures: 0, Errors: 0` dan `BUILD SUCCESS`. Folder `target/` yang muncul tidak perlu dikumpulkan dan diabaikan Git.
 
-## 5. Pengujian GET dan POST (Progres 7)
+## 5. Pengujian API v1.0 (GET, POST, PUT, PATCH, dan DELETE)
 
 Ada tiga lapis pengujian. Semuanya dijalankan dari folder `Backend`.
 
 ### a. Uji unit (JUnit 5 + Mockito)
 
-Tidak membutuhkan sistem yang menyala. Jalankan di PowerShell:
+Tidak membutuhkan sistem yang menyala. Mencakup seluruh skenario GET, POST, PUT, PATCH, DELETE, dan mesin status pesanan (total 103 uji unit). Jalankan di PowerShell:
 
 ```powershell
 cd order-service
@@ -109,20 +109,23 @@ Hasil yang diharapkan di akhir keluaran masing-masing:
 
 | Layanan | Hasil yang diharapkan |
 | :--- | :--- |
-| order-service | `Tests run: 29, Failures: 0, Errors: 0, Skipped: 0` dan `BUILD SUCCESS` |
-| catalog-service | `Tests run: 31, Failures: 0, Errors: 0, Skipped: 0` dan `BUILD SUCCESS` |
+| order-service | `Tests run: 47, Failures: 0, Errors: 0, Skipped: 0` dan `BUILD SUCCESS` |
+| catalog-service | `Tests run: 56, Failures: 0, Errors: 0, Skipped: 0` dan `BUILD SUCCESS` |
 
 ### b. Uji API black-box (Newman)
 
-Membutuhkan sistem yang sudah menyala dan `healthy` (lihat bagian 2). Jalankan di PowerShell:
+Membutuhkan sistem yang sudah menyala dan `healthy` (lihat bagian 2). Skrip `run-newman.ps1` membaca kata sandi seed dari `.env` dan menjalankan koleksi Postman lewat kontainer Docker `postman/newman:alpine`.
 
-```powershell
-./tests/api/run-newman.ps1
-```
+1. **Pengujian GET dan POST** (`dikichi-v1-get-post.postman_collection.json` — 60 request, 262 asersi):
+   ```powershell
+   ./tests/api/run-newman.ps1
+   ```
+2. **Pengujian PUT, PATCH, dan DELETE** (`dikichi-v1-put-patch-delete.postman_collection.json` — 90 request, 375 asersi):
+   ```powershell
+   ./tests/api/run-newman.ps1 -Collection dikichi-v1-put-patch-delete.postman_collection.json
+   ```
 
-Skrip membaca kata sandi seed dari `.env` dan menjalankan koleksi `tests/api/dikichi-v1-get-post.postman_collection.json` lewat Docker. Koleksi berisi 60 request dan 262 asersi (status, kode kesalahan, format respons, header `Location`, bentuk data, waktu respons). Hasil yang diharapkan pada tabel ringkasan Newman: kolom `failed` bernilai 0 pada baris requests dan assertions.
-
-Koleksi bisa dijalankan berulang kali karena ID outlet uji dibuat acak. Data uji tetap tersimpan di basis data.
+Hasil yang diharapkan pada tabel ringkasan Newman untuk kedua koleksi: kolom `failed` bernilai `0` pada seluruh baris (`requests`, `test-scripts`, dan `assertions`). Kedua koleksi bisa dijalankan berulang kali karena ID outlet uji dibuat acak. Data uji tetap tersimpan di basis data.
 
 ### c. Skrip smoke test
 
@@ -194,9 +197,12 @@ Dikichi-Order-System/
   Backend/
     docker-compose.yml
     scripts/smoke-test.sh
-    tests/api/          koleksi Newman dan skrip penjalan
+    tests/api/
+      dikichi-v1-get-post.postman_collection.json
+      dikichi-v1-put-patch-delete.postman_collection.json
+      run-newman.ps1
     gateway-service/
     catalog-service/
     order-service/
-  Documents/          dokumen proyek
+  Documents/          dokumen spesifikasi dan laporan pengujian
 ```

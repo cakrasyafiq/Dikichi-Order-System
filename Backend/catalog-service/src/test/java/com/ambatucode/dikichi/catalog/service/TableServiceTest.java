@@ -94,4 +94,53 @@ class TableServiceTest {
 
         assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
     }
+
+    @Test
+    void masterDeletesTableWithSoftDelete() {
+        caller.populate(Role.MASTER, null);
+        DiningTable table = new DiningTable("OUT-01", "T-21");
+        when(tables.findByOutletIdAndCodeAndDeletedFalse("OUT-01", "T-21")).thenReturn(Optional.of(table));
+
+        service.delete("OUT-01", "T-21");
+
+        assertThat(table).extracting("deleted").isEqualTo(true);
+    }
+
+    @Test
+    void deletingUnknownTableReturnsNotFound() {
+        caller.populate(Role.MASTER, null);
+        when(tables.findByOutletIdAndCodeAndDeletedFalse("OUT-01", "T-99")).thenReturn(Optional.empty());
+
+        ApiException error = assertApiError(() -> service.delete("OUT-01", "T-99"));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(error.getCode()).isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    void deletingTableInUnknownOutletReturnsNotFound() {
+        caller.populate(Role.MASTER, null);
+
+        ApiException error = assertApiError(() -> service.delete("OUT-404", "T-01"));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(error.getCode()).isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    void nonMasterCannotDeleteTable() {
+        caller.populate(Role.CASHIER, "OUT-01");
+
+        ApiException error = assertApiError(() -> service.delete("OUT-01", "T-01"));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(error.getCode()).isEqualTo("FORBIDDEN");
+    }
+
+    @Test
+    void anonymousCallerCannotDeleteTable() {
+        ApiException error = assertApiError(() -> service.delete("OUT-01", "T-01"));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
 }

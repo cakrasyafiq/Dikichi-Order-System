@@ -9,7 +9,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ambatucode.dikichi.catalog.config.CallerContext;
+import com.ambatucode.dikichi.catalog.dto.AvailabilityPatchRequest;
 import com.ambatucode.dikichi.catalog.dto.MenuItemCreateRequest;
+import com.ambatucode.dikichi.catalog.dto.MenuItemReplaceRequest;
 import com.ambatucode.dikichi.catalog.dto.MenuItemResponse;
 import com.ambatucode.dikichi.catalog.entity.MenuItem;
 import com.ambatucode.dikichi.catalog.entity.Outlet;
@@ -124,5 +126,166 @@ class MenuItemServiceTest {
 
         assertThat(error.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(error.getCode()).isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    void masterReplacesMenuItemWithTrimmedFields() {
+        caller.populate(Role.MASTER, null);
+        UUID id = UUID.randomUUID();
+        MenuItem existing = new MenuItem("OUT-01", "Lama", null, 15000, "Lama", true);
+        when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
+
+        MenuItemResponse response = service.replace(id,
+                new MenuItemReplaceRequest("  Mie Spesial  ", "Pedas manis", 28000, "  Mie  ", false));
+
+        assertThat(response.name()).isEqualTo("Mie Spesial");
+        assertThat(response.description()).isEqualTo("Pedas manis");
+        assertThat(response.price()).isEqualTo(28000);
+        assertThat(response.category()).isEqualTo("Mie");
+        assertThat(response.available()).isFalse();
+    }
+
+    @Test
+    void replacingUnknownMenuItemReturnsNotFound() {
+        caller.populate(Role.MASTER, null);
+        UUID id = UUID.randomUUID();
+        when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.empty());
+
+        ApiException error = assertApiError(() -> service.replace(id,
+                new MenuItemReplaceRequest("Mie", null, 25000, "Mie", true)));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(error.getCode()).isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    void nonMasterCannotReplaceMenuItem() {
+        caller.populate(Role.CASHIER, "OUT-01");
+        UUID id = UUID.randomUUID();
+
+        ApiException error = assertApiError(() -> service.replace(id,
+                new MenuItemReplaceRequest("Mie", null, 25000, "Mie", true)));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(error.getCode()).isEqualTo("FORBIDDEN");
+    }
+
+    @Test
+    void masterCanChangeAvailabilityAcrossOutlets() {
+        caller.populate(Role.MASTER, null);
+        UUID id = UUID.randomUUID();
+        MenuItem existing = new MenuItem("OUT-02", "Mie Suit", null, 25000, "Mie", true);
+        when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
+
+        MenuItemResponse response = service.changeAvailability(id, new AvailabilityPatchRequest(false));
+
+        assertThat(response.available()).isFalse();
+    }
+
+    @Test
+    void cashierCanChangeAvailabilityInOwnOutlet() {
+        caller.populate(Role.CASHIER, "OUT-01");
+        UUID id = UUID.randomUUID();
+        MenuItem existing = new MenuItem("OUT-01", "Mie Suit", null, 25000, "Mie", true);
+        when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
+
+        MenuItemResponse response = service.changeAvailability(id, new AvailabilityPatchRequest(false));
+
+        assertThat(response.available()).isFalse();
+    }
+
+    @Test
+    void kitchenCanChangeAvailabilityInOwnOutlet() {
+        caller.populate(Role.KITCHEN, "OUT-01");
+        UUID id = UUID.randomUUID();
+        MenuItem existing = new MenuItem("OUT-01", "Mie Suit", null, 25000, "Mie", false);
+        when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
+
+        MenuItemResponse response = service.changeAvailability(id, new AvailabilityPatchRequest(true));
+
+        assertThat(response.available()).isTrue();
+    }
+
+    @Test
+    void cashierCannotChangeAvailabilityOfAnotherOutlet() {
+        caller.populate(Role.CASHIER, "OUT-01");
+        UUID id = UUID.randomUUID();
+        MenuItem existing = new MenuItem("OUT-02", "Mie Suit", null, 25000, "Mie", true);
+        when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
+
+        ApiException error = assertApiError(() -> service.changeAvailability(id, new AvailabilityPatchRequest(false)));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(error.getCode()).isEqualTo("FORBIDDEN");
+        assertThat(existing.isAvailable()).isTrue();
+    }
+
+    @Test
+    void kitchenCannotChangeAvailabilityOfAnotherOutlet() {
+        caller.populate(Role.KITCHEN, "OUT-01");
+        UUID id = UUID.randomUUID();
+        MenuItem existing = new MenuItem("OUT-02", "Mie Suit", null, 25000, "Mie", true);
+        when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
+
+        ApiException error = assertApiError(() -> service.changeAvailability(id, new AvailabilityPatchRequest(false)));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(error.getCode()).isEqualTo("FORBIDDEN");
+    }
+
+    @Test
+    void anonymousCallerCannotChangeAvailability() {
+        UUID id = UUID.randomUUID();
+
+        ApiException error = assertApiError(() -> service.changeAvailability(id, new AvailabilityPatchRequest(false)));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    void changingAvailabilityOfUnknownMenuItemReturnsNotFound() {
+        caller.populate(Role.MASTER, null);
+        UUID id = UUID.randomUUID();
+        when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.empty());
+
+        ApiException error = assertApiError(() -> service.changeAvailability(id, new AvailabilityPatchRequest(false)));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(error.getCode()).isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    void masterDeletesMenuItemWithSoftDelete() {
+        caller.populate(Role.MASTER, null);
+        UUID id = UUID.randomUUID();
+        MenuItem existing = new MenuItem("OUT-01", "Mie Suit", null, 25000, "Mie", true);
+        when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
+
+        service.delete(id);
+
+        assertThat(existing).extracting("deleted").isEqualTo(true);
+    }
+
+    @Test
+    void deletingUnknownMenuItemReturnsNotFound() {
+        caller.populate(Role.MASTER, null);
+        UUID id = UUID.randomUUID();
+        when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.empty());
+
+        ApiException error = assertApiError(() -> service.delete(id));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(error.getCode()).isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    void nonMasterCannotDeleteMenuItem() {
+        caller.populate(Role.CASHIER, "OUT-01");
+        UUID id = UUID.randomUUID();
+
+        ApiException error = assertApiError(() -> service.delete(id));
+
+        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(error.getCode()).isEqualTo("FORBIDDEN");
     }
 }

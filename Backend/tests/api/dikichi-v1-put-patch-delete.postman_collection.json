@@ -1,0 +1,3050 @@
+{
+  "info": {
+    "name": "Dikichi Order System - Pengujian API v1.0 (PUT, PATCH, dan DELETE)",
+    "description": "Pengujian black-box melalui API Gateway untuk operasi mutasi PUT, PATCH, dan DELETE pada API v1.0.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "mieSuitId",
+      "value": "11111111-0000-4000-8000-000000000001"
+    },
+    {
+      "key": "esTehId",
+      "value": "11111111-0000-4000-8000-000000000009"
+    },
+    {
+      "key": "soldOutId",
+      "value": "11111111-0000-4000-8000-000000000008"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 Prasyarat Autentikasi dan Data Uji",
+      "item": [
+        {
+          "name": "POST Login MASTER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Identitas MASTER diperoleh\", () => { pm.expect(j.user.role).to.eql(\"MASTER\"); pm.expect(j.accessToken).to.be.a(\"string\").and.not.empty; });",
+                  "pm.collectionVariables.set(\"masterToken\", j.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"master\",\"password\":\"{{masterPassword}}\"}"
+            }
+          }
+        },
+        {
+          "name": "POST Login CASHIER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Identitas CASHIER OUT-01 diperoleh\", () => { pm.expect(j.user.role).to.eql(\"CASHIER\"); pm.expect(j.user.outletId).to.eql(\"OUT-01\"); });",
+                  "pm.collectionVariables.set(\"cashierToken\", j.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"cashier\",\"password\":\"{{cashierPassword}}\"}"
+            }
+          }
+        },
+        {
+          "name": "POST Login KITCHEN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Identitas KITCHEN OUT-01 diperoleh\", () => { pm.expect(j.user.role).to.eql(\"KITCHEN\"); pm.expect(j.user.outletId).to.eql(\"OUT-01\"); });",
+                  "pm.collectionVariables.set(\"kitchenToken\", j.accessToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"kitchen\",\"password\":\"{{kitchenPassword}}\"}"
+            }
+          }
+        },
+        {
+          "name": "POST Prasyarat: buat outlet uji baru oleh MASTER",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set(\"newOutletId\", \"OUT-\" + (1000 + Math.floor(Math.random() * 8999)));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "pm.test(\"Outlet uji baru berhasil dibuat\", () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get(\"newOutletId\")));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{newOutletId}}\",\"name\":\"Outlet Uji Mutasi\",\"address\":\"Jl. Mutasi No. 1\"}"
+            }
+          }
+        },
+        {
+          "name": "POST Prasyarat: buat meja pada outlet uji baru",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "pm.test(\"Meja T-01 terdaftar pada outlet uji\", () => pm.expect(pm.response.json().code).to.eql(\"T-01\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}/tables",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\":\"T-01\"}"
+            }
+          }
+        },
+        {
+          "name": "POST Prasyarat: buat item menu pada outlet uji baru",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Menu outlet uji tersedia secara bawaan\", () => pm.expect(j.available).to.be.true);",
+                  "pm.collectionVariables.set(\"otherOutletMenuId\", j.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}/menu-items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Menu Outlet Lain\",\"price\":15000,\"category\":\"Uji\"}"
+            }
+          }
+        },
+        {
+          "name": "POST Prasyarat: buat item menu uji pada OUT-01",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Menu uji OUT-01 berhasil dibuat\", () => pm.expect(j.outletId).to.eql(\"OUT-01\"));",
+                  "pm.collectionVariables.set(\"testMenuId\", j.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/OUT-01/menu-items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Menu Uji OUT-01\",\"price\":18000,\"category\":\"Uji\"}"
+            }
+          }
+        },
+        {
+          "name": "POST Prasyarat: buat pesanan awal PENDING oleh tamu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Pesanan awal berstatus PENDING dengan total 50000\", () => { pm.expect(j.status).to.eql(\"PENDING\"); pm.expect(j.totalAmount).to.eql(50000); });",
+                  "pm.test(\"Nomor pesanan berformat ORD-\", () => pm.expect(j.orderNumber).to.match(/^ORD-\\d{4,}$/));",
+                  "pm.collectionVariables.set(\"orderId\", j.id);",
+                  "pm.collectionVariables.set(\"orderNumber\", j.orderNumber);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-01\",\n  \"customerName\": \"Budi\",\n  \"items\": [\n    {\"menuItemId\": \"{{mieSuitId}}\", \"quantity\": 2}\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 Catalog PUT (Outlet dan Item Menu)",
+      "item": [
+        {
+          "name": "PUT outlet tanpa token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(401); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan UNAUTHORIZED\", () => pm.expect(pm.response.json().code).to.eql(\"UNAUTHORIZED\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Tanpa Token\",\"address\":\"Jl. Uji\"}"
+            }
+          }
+        },
+        {
+          "name": "PUT outlet oleh CASHIER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(403); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan FORBIDDEN\", () => pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Oleh Kasir\",\"address\":\"Jl. Uji\"}"
+            }
+          }
+        },
+        {
+          "name": "PUT outlet oleh KITCHEN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(403); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan FORBIDDEN\", () => pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kitchenToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Oleh Dapur\",\"address\":\"Jl. Uji\"}"
+            }
+          }
+        },
+        {
+          "name": "PUT outlet yang tidak ada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(404); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan NOT_FOUND\", () => pm.expect(pm.response.json().code).to.eql(\"NOT_FOUND\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/OUT-404",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Tidak Ada\",\"address\":\"Jl. Uji\"}"
+            }
+          }
+        },
+        {
+          "name": "PUT outlet dengan body tidak valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan VALIDATION_ERROR\", () => pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Field bermasalah dilaporkan\", () => { const f = pm.response.json().errors.map(e => e.field); pm.expect(f).to.include.members([\"name\", \"address\"]); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"\",\"address\":\"\"}"
+            }
+          }
+        },
+        {
+          "name": "PUT outlet dengan JSON rusak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan MALFORMED_REQUEST\", () => pm.expect(pm.response.json().code).to.eql(\"MALFORMED_REQUEST\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": "
+            }
+          }
+        },
+        {
+          "name": "PUT outlet oleh MASTER dengan pemangkasan spasi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"ID outlet tidak berubah\", () => pm.expect(j.id).to.eql(pm.collectionVariables.get(\"newOutletId\")));",
+                  "pm.test(\"Nama dan alamat diperbarui serta dipangkas\", () => { pm.expect(j.name).to.eql(\"Outlet Uji Diperbarui\"); pm.expect(j.address).to.eql(\"Jl. Mutasi Baru No. 2\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"  Outlet Uji Diperbarui  \",\"address\":\"  Jl. Mutasi Baru No. 2  \"}"
+            }
+          }
+        },
+        {
+          "name": "GET outlet memastikan perubahan PUT tersimpan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Perubahan nama dan alamat tersimpan di basis data\", () => { pm.expect(j.name).to.eql(\"Outlet Uji Diperbarui\"); pm.expect(j.address).to.eql(\"Jl. Mutasi Baru No. 2\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}"
+          }
+        },
+        {
+          "name": "PUT item menu tanpa token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(401); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan UNAUTHORIZED\", () => pm.expect(pm.response.json().code).to.eql(\"UNAUTHORIZED\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Tanpa Token\",\"description\":null,\"price\":20000,\"category\":\"Uji\",\"available\":true}"
+            }
+          }
+        },
+        {
+          "name": "PUT item menu oleh CASHIER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(403); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan FORBIDDEN\", () => pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Oleh Kasir\",\"description\":null,\"price\":20000,\"category\":\"Uji\",\"available\":true}"
+            }
+          }
+        },
+        {
+          "name": "PUT item menu dengan ID bukan UUID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan VALIDATION_ERROR\", () => pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/bukan-uuid",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"UUID Salah\",\"description\":null,\"price\":20000,\"category\":\"Uji\",\"available\":true}"
+            }
+          }
+        },
+        {
+          "name": "PUT item menu yang tidak ada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(404); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan NOT_FOUND\", () => pm.expect(pm.response.json().code).to.eql(\"NOT_FOUND\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{$guid}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Tidak Ada\",\"description\":null,\"price\":20000,\"category\":\"Uji\",\"available\":true}"
+            }
+          }
+        },
+        {
+          "name": "PUT item menu dengan harga 0 dan available null",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan VALIDATION_ERROR\", () => pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Field price dan available dilaporkan\", () => { const f = pm.response.json().errors.map(e => e.field); pm.expect(f).to.include.members([\"price\", \"available\"]); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Menu Invalid\",\"description\":null,\"price\":0,\"category\":\"Uji\",\"available\":null}"
+            }
+          }
+        },
+        {
+          "name": "PUT item menu oleh MASTER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"ID dan outletId tetap sama\", () => { pm.expect(j.id).to.eql(pm.collectionVariables.get(\"testMenuId\")); pm.expect(j.outletId).to.eql(\"OUT-01\"); });",
+                  "pm.test(\"Nama dan kategori dipangkas\", () => { pm.expect(j.name).to.eql(\"Menu Uji Spesial\"); pm.expect(j.category).to.eql(\"Spesial\"); });",
+                  "pm.test(\"Deskripsi, harga, dan available diperbarui\", () => { pm.expect(j.description).to.eql(\"Deskripsi baru\"); pm.expect(j.price).to.eql(22000); pm.expect(j.available).to.be.true; });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"  Menu Uji Spesial  \",\"description\":\"Deskripsi baru\",\"price\":22000,\"category\":\"  Spesial  \",\"available\":true}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Catalog PATCH (Ketersediaan Item Menu)",
+      "item": [
+        {
+          "name": "PATCH availability tanpa token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(401); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan UNAUTHORIZED\", () => pm.expect(pm.response.json().code).to.eql(\"UNAUTHORIZED\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"available\":false}"
+            }
+          }
+        },
+        {
+          "name": "PATCH availability dengan ID bukan UUID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan VALIDATION_ERROR\", () => pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/bukan-uuid/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"available\":false}"
+            }
+          }
+        },
+        {
+          "name": "PATCH availability pada item yang tidak ada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(404); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan NOT_FOUND\", () => pm.expect(pm.response.json().code).to.eql(\"NOT_FOUND\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{$guid}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"available\":false}"
+            }
+          }
+        },
+        {
+          "name": "PATCH availability dengan body kosong",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan VALIDATION_ERROR\", () => pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Field available dilaporkan\", () => { const f = pm.response.json().errors.map(e => e.field); pm.expect(f).to.include(\"available\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          }
+        },
+        {
+          "name": "PATCH availability dengan JSON rusak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan MALFORMED_REQUEST\", () => pm.expect(pm.response.json().code).to.eql(\"MALFORMED_REQUEST\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"available\": "
+            }
+          }
+        },
+        {
+          "name": "PATCH availability item outlet lain oleh CASHIER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(403); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan FORBIDDEN\", () => pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{otherOutletMenuId}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"available\":false}"
+            }
+          }
+        },
+        {
+          "name": "PATCH availability item outlet lain oleh KITCHEN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(403); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan FORBIDDEN\", () => pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kitchenToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{otherOutletMenuId}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"available\":false}"
+            }
+          }
+        },
+        {
+          "name": "PATCH availability item outlet lain oleh MASTER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "pm.test(\"MASTER berhasil mengubah availability lintas outlet\", () => pm.expect(pm.response.json().available).to.be.false);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{otherOutletMenuId}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"available\":false}"
+            }
+          }
+        },
+        {
+          "name": "PATCH availability menjadi false oleh CASHIER pada outlet sendiri",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "pm.test(\"CASHIER berhasil menonaktifkan item menu outlet sendiri\", () => pm.expect(pm.response.json().available).to.be.false);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"available\":false}"
+            }
+          }
+        },
+        {
+          "name": "POST pesanan berisi item yang baru dinonaktifkan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(409); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan ITEM_UNAVAILABLE\", () => pm.expect(pm.response.json().code).to.eql(\"ITEM_UNAVAILABLE\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Item bermasalah dilaporkan pada errors[0]\", () => pm.expect(pm.response.json().errors[0].field).to.eql(\"items[0].menuItemId\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-01\",\n  \"customerName\": \"Budi\",\n  \"items\": [\n    {\"menuItemId\": \"{{testMenuId}}\", \"quantity\": 1}\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "PATCH availability kembali menjadi true oleh KITCHEN pada outlet sendiri",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "pm.test(\"KITCHEN berhasil mengaktifkan kembali item menu outlet sendiri\", () => pm.expect(pm.response.json().available).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kitchenToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"available\":true}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Order PUT (Penggantian Pesanan PENDING)",
+      "item": [
+        {
+          "name": "PUT pesanan tanpa token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(401); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan UNAUTHORIZED\", () => pm.expect(pm.response.json().code).to.eql(\"UNAUTHORIZED\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-02\",\n  \"customerName\": \"Budi\",\n  \"items\": [{\"menuItemId\": \"{{mieSuitId}}\", \"quantity\": 1}]\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT pesanan oleh KITCHEN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(403); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan FORBIDDEN\", () => pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kitchenToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-02\",\n  \"customerName\": \"Budi\",\n  \"items\": [{\"menuItemId\": \"{{mieSuitId}}\", \"quantity\": 1}]\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT pesanan oleh MASTER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(403); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan FORBIDDEN\", () => pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-02\",\n  \"customerName\": \"Budi\",\n  \"items\": [{\"menuItemId\": \"{{mieSuitId}}\", \"quantity\": 1}]\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT pesanan dengan ID bukan UUID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan VALIDATION_ERROR\", () => pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/bukan-uuid",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-02\",\n  \"customerName\": \"Budi\",\n  \"items\": [{\"menuItemId\": \"{{mieSuitId}}\", \"quantity\": 1}]\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT pesanan yang tidak ada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(404); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan NOT_FOUND\", () => pm.expect(pm.response.json().code).to.eql(\"NOT_FOUND\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{$guid}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-02\",\n  \"customerName\": \"Budi\",\n  \"items\": [{\"menuItemId\": \"{{mieSuitId}}\", \"quantity\": 1}]\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT pesanan mencoba mengubah outletId",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan OUTLET_IMMUTABLE\", () => pm.expect(pm.response.json().code).to.eql(\"OUTLET_IMMUTABLE\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Field outletId dilaporkan\", () => pm.expect(pm.response.json().errors[0].field).to.eql(\"outletId\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-02\",\n  \"tableCode\": \"T-02\",\n  \"customerName\": \"Budi\",\n  \"items\": [{\"menuItemId\": \"{{mieSuitId}}\", \"quantity\": 1}]\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT pesanan dengan item ganda",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan DUPLICATE_MENU_ITEM\", () => pm.expect(pm.response.json().code).to.eql(\"DUPLICATE_MENU_ITEM\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Field items[1].menuItemId dilaporkan\", () => pm.expect(pm.response.json().errors[0].field).to.eql(\"items[1].menuItemId\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-02\",\n  \"customerName\": \"Budi\",\n  \"items\": [\n    {\"menuItemId\": \"{{mieSuitId}}\", \"quantity\": 1},\n    {\"menuItemId\": \"{{mieSuitId}}\", \"quantity\": 2}\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT pesanan tanpa daftar item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan VALIDATION_ERROR\", () => pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-02\",\n  \"customerName\": \"Budi\",\n  \"items\": []\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT pesanan dengan jumlah item 100",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan VALIDATION_ERROR\", () => pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-02\",\n  \"customerName\": \"Budi\",\n  \"items\": [{\"menuItemId\": \"{{mieSuitId}}\", \"quantity\": 100}]\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT pesanan dengan JSON rusak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan MALFORMED_REQUEST\", () => pm.expect(pm.response.json().code).to.eql(\"MALFORMED_REQUEST\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"outletId\": \"OUT-01\""
+            }
+          }
+        },
+        {
+          "name": "PUT pesanan dengan kode meja yang tidak ada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(422); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan INVALID_TABLE\", () => pm.expect(pm.response.json().code).to.eql(\"INVALID_TABLE\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-99\",\n  \"customerName\": \"Budi\",\n  \"items\": [{\"menuItemId\": \"{{mieSuitId}}\", \"quantity\": 1}]\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT pesanan dengan item yang tidak ada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(422); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan INVALID_MENU_ITEM\", () => pm.expect(pm.response.json().code).to.eql(\"INVALID_MENU_ITEM\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-02\",\n  \"customerName\": \"Budi\",\n  \"items\": [{\"menuItemId\": \"{{$guid}}\", \"quantity\": 1}]\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT pesanan berisi item sold out",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(409); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan ITEM_UNAVAILABLE\", () => pm.expect(pm.response.json().code).to.eql(\"ITEM_UNAVAILABLE\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Item sold out dilaporkan\", () => pm.expect(pm.response.json().errors[0].field).to.eql(\"items[0].menuItemId\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-02\",\n  \"customerName\": \"Budi\",\n  \"items\": [{\"menuItemId\": \"{{soldOutId}}\", \"quantity\": 1}]\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT pesanan PENDING oleh CASHIER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"ID dan nomor pesanan tetap sama\", () => { pm.expect(j.id).to.eql(pm.collectionVariables.get(\"orderId\")); pm.expect(j.orderNumber).to.eql(pm.collectionVariables.get(\"orderNumber\")); });",
+                  "pm.test(\"Status tetap PENDING\", () => pm.expect(j.status).to.eql(\"PENDING\"));",
+                  "pm.test(\"Meja dan nama pelanggan diperbarui\", () => { pm.expect(j.tableCode).to.eql(\"T-05\"); pm.expect(j.customerName).to.eql(\"Budi Santoso\"); });",
+                  "pm.test(\"Daftar item dan total dihitung ulang menjadi 37000\", () => { pm.expect(j.items).to.have.lengthOf(2); pm.expect(j.totalAmount).to.eql(37000); });",
+                  "pm.test(\"Kontrak v1 tetap datar tanpa objek bersarang\", () => { pm.expect(j).to.not.have.property(\"customer\"); pm.expect(j).to.not.have.property(\"location\"); pm.expect(j).to.not.have.property(\"paymentSummary\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-05\",\n  \"customerName\": \"  Budi Santoso  \",\n  \"items\": [\n    {\"menuItemId\": \"{{mieSuitId}}\", \"quantity\": 1},\n    {\"menuItemId\": \"{{esTehId}}\", \"quantity\": 2}\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Order PATCH (Transisi Status Pesanan)",
+      "item": [
+        {
+          "name": "PATCH status tanpa token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(401); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan UNAUTHORIZED\", () => pm.expect(pm.response.json().code).to.eql(\"UNAUTHORIZED\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"ACCEPTED\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status oleh MASTER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(403); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan FORBIDDEN\", () => pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"ACCEPTED\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status dengan body kosong",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan VALIDATION_ERROR\", () => pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Field status dilaporkan\", () => pm.expect(pm.response.json().errors[0].field).to.eql(\"status\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status dengan nilai status tidak dikenal",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan VALIDATION_ERROR\", () => pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Field status dilaporkan\", () => pm.expect(pm.response.json().errors[0].field).to.eql(\"status\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"NOPE\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status dengan JSON rusak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan MALFORMED_REQUEST\", () => pm.expect(pm.response.json().code).to.eql(\"MALFORMED_REQUEST\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\": "
+            }
+          }
+        },
+        {
+          "name": "PATCH status pada pesanan yang tidak ada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(404); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan NOT_FOUND\", () => pm.expect(pm.response.json().code).to.eql(\"NOT_FOUND\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{$guid}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"ACCEPTED\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status ke PENDING",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(409); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan INVALID_STATUS_TRANSITION\", () => pm.expect(pm.response.json().code).to.eql(\"INVALID_STATUS_TRANSITION\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"PENDING\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status ke PREPARING",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(409); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan INVALID_STATUS_TRANSITION\", () => pm.expect(pm.response.json().code).to.eql(\"INVALID_STATUS_TRANSITION\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"PREPARING\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status ke CANCELLED oleh KITCHEN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(403); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan FORBIDDEN\", () => pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kitchenToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"CANCELLED\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status ke READY oleh CASHIER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(403); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan FORBIDDEN\", () => pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"READY\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status dari PENDING langsung ke READY oleh KITCHEN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(409); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan INVALID_STATUS_TRANSITION\", () => pm.expect(pm.response.json().code).to.eql(\"INVALID_STATUS_TRANSITION\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kitchenToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"READY\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status dari PENDING ke ACCEPTED oleh CASHIER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Status berpindah ke ACCEPTED\", () => pm.expect(j.status).to.eql(\"ACCEPTED\"));",
+                  "pm.test(\"Total tetap 37000\", () => pm.expect(j.totalAmount).to.eql(37000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"ACCEPTED\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status dari ACCEPTED ke ACCEPTED lagi",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(409); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan INVALID_STATUS_TRANSITION\", () => pm.expect(pm.response.json().code).to.eql(\"INVALID_STATUS_TRANSITION\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"ACCEPTED\"}"
+            }
+          }
+        },
+        {
+          "name": "PUT pesanan yang sudah berstatus ACCEPTED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(409); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan ORDER_NOT_EDITABLE\", () => pm.expect(pm.response.json().code).to.eql(\"ORDER_NOT_EDITABLE\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-05\",\n  \"customerName\": \"Budi Santoso\",\n  \"items\": [{\"menuItemId\": \"{{mieSuitId}}\", \"quantity\": 1}]\n}"
+            }
+          }
+        },
+        {
+          "name": "POST Prasyarat: bayar pesanan agar berpindah ke PREPARING",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "pm.test(\"Status berpindah ke PREPARING setelah pembayaran\", () => pm.expect(pm.response.json().status).to.eql(\"PREPARING\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/pay",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"paymentMethod\":\"QRIS\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status dari PREPARING ke CANCELLED oleh CASHIER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(409); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan INVALID_STATUS_TRANSITION\", () => pm.expect(pm.response.json().code).to.eql(\"INVALID_STATUS_TRANSITION\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"CANCELLED\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status dari PREPARING langsung ke COMPLETED oleh KITCHEN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(409); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan INVALID_STATUS_TRANSITION\", () => pm.expect(pm.response.json().code).to.eql(\"INVALID_STATUS_TRANSITION\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kitchenToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"COMPLETED\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status dari PREPARING ke READY oleh KITCHEN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "pm.test(\"Status berpindah ke READY\", () => pm.expect(pm.response.json().status).to.eql(\"READY\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kitchenToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"READY\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status dari READY ke COMPLETED oleh KITCHEN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "pm.test(\"Status berpindah ke COMPLETED\", () => pm.expect(pm.response.json().status).to.eql(\"COMPLETED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kitchenToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"COMPLETED\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status dari COMPLETED ke READY oleh KITCHEN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(409); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan INVALID_STATUS_TRANSITION\", () => pm.expect(pm.response.json().code).to.eql(\"INVALID_STATUS_TRANSITION\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{kitchenToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"READY\"}"
+            }
+          }
+        },
+        {
+          "name": "POST Prasyarat: buat pesanan kedua untuk uji pembatalan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"Pesanan kedua berstatus PENDING\", () => pm.expect(j.status).to.eql(\"PENDING\"));",
+                  "pm.collectionVariables.set(\"cancelOrderId\", j.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outletId\": \"OUT-01\",\n  \"tableCode\": \"T-03\",\n  \"customerName\": \"Siti\",\n  \"items\": [{\"menuItemId\": \"{{mieSuitId}}\", \"quantity\": 1}]\n}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status dari PENDING ke CANCELLED oleh CASHIER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "pm.test(\"Status berpindah ke CANCELLED\", () => pm.expect(pm.response.json().status).to.eql(\"CANCELLED\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{cancelOrderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"CANCELLED\"}"
+            }
+          }
+        },
+        {
+          "name": "PATCH status dari CANCELLED ke ACCEPTED oleh CASHIER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(409); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan INVALID_STATUS_TRANSITION\", () => pm.expect(pm.response.json().code).to.eql(\"INVALID_STATUS_TRANSITION\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders/{{cancelOrderId}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"ACCEPTED\"}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Catalog DELETE (Soft Delete Item Menu, Meja, dan Outlet)",
+      "item": [
+        {
+          "name": "DELETE item menu tanpa token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(401); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan UNAUTHORIZED\", () => pm.expect(pm.response.json().code).to.eql(\"UNAUTHORIZED\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}"
+          }
+        },
+        {
+          "name": "DELETE item menu oleh CASHIER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(403); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan FORBIDDEN\", () => pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}"
+          }
+        },
+        {
+          "name": "DELETE item menu dengan ID bukan UUID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(400); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan VALIDATION_ERROR\", () => pm.expect(pm.response.json().code).to.eql(\"VALIDATION_ERROR\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/bukan-uuid"
+          }
+        },
+        {
+          "name": "DELETE item menu oleh MASTER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Body respons kosong\", () => pm.expect(pm.response.text()).to.be.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}"
+          }
+        },
+        {
+          "name": "DELETE item menu yang sama untuk kedua kalinya",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(404); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan NOT_FOUND\", () => pm.expect(pm.response.json().code).to.eql(\"NOT_FOUND\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}"
+          }
+        },
+        {
+          "name": "GET item menu yang sudah dihapus",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(404); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan NOT_FOUND\", () => pm.expect(pm.response.json().code).to.eql(\"NOT_FOUND\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}"
+          }
+        },
+        {
+          "name": "PUT item menu yang sudah dihapus",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(404); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan NOT_FOUND\", () => pm.expect(pm.response.json().code).to.eql(\"NOT_FOUND\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"Sudah Dihapus\",\"description\":null,\"price\":20000,\"category\":\"Uji\",\"available\":true}"
+            }
+          }
+        },
+        {
+          "name": "PATCH availability pada item menu yang sudah dihapus",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(404); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan NOT_FOUND\", () => pm.expect(pm.response.json().code).to.eql(\"NOT_FOUND\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/menu-items/{{testMenuId}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"available\":false}"
+            }
+          }
+        },
+        {
+          "name": "PUT meja ditolak karena operasi tidak didukung",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 405\", () => pm.response.to.have.status(405));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(405); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan METHOD_NOT_ALLOWED\", () => pm.expect(pm.response.json().code).to.eql(\"METHOD_NOT_ALLOWED\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}/tables/T-01",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\":\"T-02\"}"
+            }
+          }
+        },
+        {
+          "name": "DELETE meja tanpa token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(401); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan UNAUTHORIZED\", () => pm.expect(pm.response.json().code).to.eql(\"UNAUTHORIZED\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}/tables/T-01"
+          }
+        },
+        {
+          "name": "DELETE meja oleh CASHIER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(403); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan FORBIDDEN\", () => pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}/tables/T-01"
+          }
+        },
+        {
+          "name": "DELETE meja pada outlet yang tidak ada",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(404); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan NOT_FOUND\", () => pm.expect(pm.response.json().code).to.eql(\"NOT_FOUND\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/OUT-404/tables/T-01"
+          }
+        },
+        {
+          "name": "DELETE meja oleh MASTER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Body respons kosong\", () => pm.expect(pm.response.text()).to.be.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}/tables/T-01"
+          }
+        },
+        {
+          "name": "DELETE meja yang sama untuk kedua kalinya",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(404); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan NOT_FOUND\", () => pm.expect(pm.response.json().code).to.eql(\"NOT_FOUND\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}/tables/T-01"
+          }
+        },
+        {
+          "name": "POST pembuatan ulang meja dengan kode yang sama setelah soft delete",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
+                  "pm.test(\"Kode meja T-01 dapat dibuat ulang setelah soft delete\", () => pm.expect(pm.response.json().code).to.eql(\"T-01\"));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}/tables",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\":\"T-01\"}"
+            }
+          }
+        },
+        {
+          "name": "DELETE outlet tanpa token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(401); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan UNAUTHORIZED\", () => pm.expect(pm.response.json().code).to.eql(\"UNAUTHORIZED\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}"
+          }
+        },
+        {
+          "name": "DELETE outlet oleh CASHIER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(403); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan FORBIDDEN\", () => pm.expect(pm.response.json().code).to.eql(\"FORBIDDEN\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{cashierToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}"
+          }
+        },
+        {
+          "name": "DELETE outlet oleh MASTER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
+                  "pm.test(\"Body respons kosong\", () => pm.expect(pm.response.text()).to.be.empty);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}"
+          }
+        },
+        {
+          "name": "DELETE outlet yang sama untuk kedua kalinya",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(404); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan NOT_FOUND\", () => pm.expect(pm.response.json().code).to.eql(\"NOT_FOUND\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets/{{newOutletId}}"
+          }
+        },
+        {
+          "name": "POST outlet dengan ID yang sudah di-soft-delete tetap ditolak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Format kesalahan seragam\", () => { const j = pm.response.json(); pm.expect(j).to.have.all.keys(\"timestamp\", \"status\", \"code\", \"message\", \"path\", \"errors\"); pm.expect(j.errors).to.be.an(\"array\"); pm.expect(j.status).to.eql(409); pm.expect(j.path).to.be.a(\"string\"); });",
+                  "pm.test(\"Kode kesalahan DUPLICATE_OUTLET_ID\", () => pm.expect(pm.response.json().code).to.eql(\"DUPLICATE_OUTLET_ID\"));",
+                  "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{masterToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/outlets",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"id\":\"{{newOutletId}}\",\"name\":\"Duplikat Soft Delete\",\"address\":\"Jl. Uji\"}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
