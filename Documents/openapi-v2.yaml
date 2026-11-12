@@ -1,0 +1,1284 @@
+openapi: 3.1.0
+info:
+  title: Dikichi Order Management Platform API
+  version: "2.0.0"
+  summary: Kontrak publik API versi 2.0 platform pemesanan dine-in Dikichi, dilihat dari API Gateway.
+  description: |
+    Dokumen ini adalah spesifikasi **API versi 2.0**. Sumber kebenaran tetap
+    `PRD-Dikichi-Order-Platform-v1.md` (v1.1, Decision Log D4 dan D15–D24) serta
+    `API-Migration-v1-to-v2.md`. Kontrak versi 1.x (termasuk Order v1 yang datar) ada di `openapi.yaml`.
+
+    **Apa yang berubah di 2.0**
+    - Resource Order memakai kontrak bersarang di `/api/v2/orders`: `customer`, `location`, dan
+      `paymentSummary` menggantikan field datar `customerName`, `outletId`, `tableCode`, `totalAmount`.
+    - `paymentSummary` baru menampilkan status, metode, uang diterima, dan kembalian pembayaran.
+    - Perubahan ini *breaking*: body v1 yang dikirim ke `/api/v2/orders` ditolak `400 VALIDATION_ERROR`.
+
+    **Apa yang tidak berubah (Decision D4)**
+    - Auth, Outlet, Meja, dan Item Menu tidak memiliki perubahan kontrak sehingga **tetap dilayani di
+      path `/api/v1`**. Endpoint tersebut menjadi bagian dari API 2.0 tanpa perubahan bentuk data.
+    - `/api/v1/orders` (legacy) tetap aktif berdampingan dengan v2 sampai akhir evaluasi mata kuliah,
+      tanpa header `Deprecation`/`Sunset` (D19). Kedua versi berbagi domain dan basis data yang sama.
+
+    **Konvensi**
+    - Semua path adalah path gateway. Layanan hilir memakai path yang sama (tanpa penulisan ulang prefix).
+    - Hanya JSON. Timestamp ISO-8601 UTC. Uang dalam bilangan bulat Rupiah (tanpa desimal).
+    - Setiap kesalahan memakai skema `ErrorResponse`; `errors` selalu ada (array kosong bila tidak ada detail field).
+    - `DELETE` adalah *soft delete* (`is_deleted = true`), menghasilkan `204`; menghapus ulang menghasilkan `404`.
+    - Order **tidak memiliki** `DELETE`. Pesanan dibatalkan melalui `PATCH /api/v2/orders/{orderId}/status`
+      dengan `status: CANCELLED` agar riwayat transaksi tetap dapat diaudit. Metode yang tidak didukung
+      menghasilkan `405 METHOD_NOT_ALLOWED`.
+
+    **Autentikasi**
+    - Staf memperoleh JWT dari `POST /api/v1/auth/login` (HS256, kedaluwarsa 8 jam, tanpa refresh token).
+    - Kirim sebagai `Authorization: Bearer <token>`.
+    - Klaim: `sub` (username), `role` (`MASTER` | `CASHIER` | `KITCHEN`), `outletId` (null untuk MASTER).
+    - Gateway memvalidasi token lalu meneruskan `X-User-Name`, `X-User-Role`, `X-Outlet-Id` ke layanan hilir
+      dan membuang salinan header tersebut yang dikirim klien.
+  contact:
+    name: Team Ambatucode
+servers:
+  - url: http://localhost:8080
+    description: API Gateway (Docker Compose lokal)
+  - url: http://localhost
+    description: Nginx frontend, meneruskan /api ke gateway (satu origin, tanpa CORS)
+tags:
+  - name: Orders v2
+    description: Kontrak Order bersarang dengan ringkasan pembayaran (order-service). Inti perubahan API 2.0.
+  - name: Auth
+    description: Login staf dan penerbitan JWT (catalog-service). Tidak berubah dari v1.
+  - name: Outlets
+    description: Pengelolaan outlet (catalog-service). Tidak berubah dari v1.
+  - name: Tables
+    description: Pengelolaan meja (catalog-service). Tidak berubah dari v1.
+  - name: Menu Items
+    description: Pengelolaan item menu dan ketersediaan (catalog-service). Tidak berubah dari v1.
+security:
+  - bearerAuth: []
+
+paths:
+  # ───────────────────────────── Orders v2 ─────────────────────────────
+  /api/v2/orders:
+    post:
+      tags: [Orders v2]
+      operationId: createOrderV2
+      summary: Tamu membuat pesanan (kontrak v2 bersarang)
+      description: |
+        Publik (tidak butuh JWT; tetap publik walaupun request membawa JWT staf, D16).
+        Server memvalidasi outlet, meja, dan item melalui catalog-service, menyimpan *snapshot* nama dan
+        harga item, menghitung `paymentSummary.totalAmount = Σ(unitPrice × quantity)`, lalu membuat pesanan
+        `PENDING` dengan `paymentStatus: UNPAID`. Harga dari klien diabaikan. Semua atau tidak sama sekali:
+        bila ada satu item tidak tersedia, tidak ada pesanan yang dibuat.
+
+        Urutan validasi: field body (`400`) → outlet → meja → keberadaan item (`422`) → ketersediaan (`409`).
+        Body berbentuk v1 (datar) ditolak `400 VALIDATION_ERROR` karena `customer` dan `location` wajib ada.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V2OrderRequest'
+            examples:
+              valid:
+                summary: Body v2 yang valid
+                value:
+                  customer:
+                    name: Budi
+                  location:
+                    outletId: OUT-01
+                    tableCode: T-01
+                  items:
+                    - menuItemId: 11111111-0000-4000-8000-000000000001
+                      quantity: 2
+      responses:
+        '201':
+          description: Dibuat. Body respons adalah satu-satunya bukti pesanan bagi pelanggan.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V2OrderResponse'
+              examples:
+                pending:
+                  $ref: '#/components/examples/OrderPending'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    get:
+      tags: [Orders v2]
+      operationId: listOrdersV2
+      summary: Antrean pesanan (Cashier, Kitchen; outlet sendiri)
+      description: |
+        Mengembalikan pesanan outlet pemanggil, urut dari yang paling lama, tanpa paginasi (D13).
+        Tanpa filter `status`, Cashier melihat `PENDING` dan `ACCEPTED`, Kitchen melihat `PREPARING` dan `READY`.
+        Master tidak memiliki akses ke pesanan (D14) dan mendapat `403`.
+      parameters:
+        - $ref: '#/components/parameters/OrderOutletIdQuery'
+        - $ref: '#/components/parameters/OrderStatusQuery'
+      responses:
+        '200':
+          description: Daftar pesanan dalam bentuk v2.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/V2OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v2/orders/{orderId}:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [Orders v2]
+      operationId: getOrderV2
+      summary: Detail pesanan (Cashier, Kitchen; outlet sendiri)
+      description: Pesanan yang dibuat melalui v1 juga dapat dibaca di sini dan dikembalikan dalam bentuk v2.
+      responses:
+        '200':
+          description: Pesanan.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V2OrderResponse'
+              examples:
+                pending:
+                  $ref: '#/components/examples/OrderPending'
+                paidCash:
+                  $ref: '#/components/examples/OrderPaidCash'
+                paidQris:
+                  $ref: '#/components/examples/OrderPaidQris'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Orders v2]
+      operationId: replaceOrderV2
+      summary: Mengganti pesanan PENDING (Cashier)
+      description: |
+        Penggantian penuh nama pelanggan, kode meja, dan daftar item (D10). Item divalidasi ulang ke
+        catalog-service, snapshot harga diperbarui, dan total dihitung ulang.
+        - `location.outletId` harus sama dengan outlet pesanan saat ini, jika tidak `400 OUTLET_IMMUTABLE` (D16).
+        - Pesanan yang tidak berstatus `PENDING` menghasilkan `409 ORDER_NOT_EDITABLE`.
+        - Penulisan bersamaan dilindungi *optimistic locking* (`409 CONCURRENT_MODIFICATION`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V2OrderRequest'
+            example:
+              customer:
+                name: Budi Santoso
+              location:
+                outletId: OUT-01
+                tableCode: T-05
+              items:
+                - menuItemId: 11111111-0000-4000-8000-000000000001
+                  quantity: 1
+                - menuItemId: 11111111-0000-4000-8000-000000000002
+                  quantity: 2
+      responses:
+        '200':
+          description: Pesanan berhasil diganti.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V2OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v2/orders/{orderId}/pay:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      tags: [Orders v2]
+      operationId: payOrderV2
+      summary: Mencatat pembayaran tiruan (Cashier)
+      description: |
+        Hanya untuk pesanan `ACCEPTED`. Secara atomik membuat pembayaran dan mengubah status menjadi `PREPARING`.
+        Body request identik dengan v1; yang berbeda hanya respons, yang di v2 memuat `paymentSummary` lengkap.
+        - `CASH`: `amountTendered` wajib dan ≥ total; `change = amountTendered − totalAmount`.
+        - `QRIS`/`CARD`: `amountTendered` harus null atau tidak dikirim.
+        - Pembayaran kedua → `409 ORDER_ALREADY_PAID`. Pesanan non-`ACCEPTED` lain → `409 INVALID_STATUS_TRANSITION`.
+        - Ketersediaan item tidak diperiksa ulang (D12).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+            examples:
+              cash:
+                summary: Tunai dengan kembalian
+                value:
+                  paymentMethod: CASH
+                  amountTendered: 60000
+              qris:
+                summary: QRIS
+                value:
+                  paymentMethod: QRIS
+                  amountTendered: null
+      responses:
+        '200':
+          description: Pesanan terbaru (status `PREPARING`) beserta `paymentSummary`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V2OrderResponse'
+              examples:
+                paidCash:
+                  $ref: '#/components/examples/OrderPaidCash'
+                paidQris:
+                  $ref: '#/components/examples/OrderPaidQris'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v2/orders/{orderId}/status:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    patch:
+      tags: [Orders v2]
+      operationId: patchOrderStatusV2
+      summary: Mengubah status pesanan, termasuk pembatalan (Cashier, Kitchen)
+      description: |
+        Menggantikan peran `DELETE` untuk pesanan: pembatalan dilakukan dengan `status: CANCELLED`.
+        Transisi yang diizinkan: `PENDING→ACCEPTED`, `PENDING→CANCELLED`, `ACCEPTED→CANCELLED` (Cashier),
+        `PREPARING→READY`, `READY→COMPLETED` (Kitchen). `PENDING` dan `PREPARING` tidak pernah bisa di-PATCH.
+
+        Urutan evaluasi (D16): role → body → keberadaan pesanan → cakupan outlet → target terlarang →
+        kepemilikan target oleh role → transisi dari status saat ini → optimistic lock.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderStatusPatchRequest'
+            examples:
+              accept:
+                value:
+                  status: ACCEPTED
+              cancel:
+                value:
+                  status: CANCELLED
+      responses:
+        '200':
+          description: Pesanan terbaru dalam bentuk v2.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V2OrderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ───────────────────────────── Auth ─────────────────────────────
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      summary: Login staf
+      description: Memverifikasi akun staf (BCrypt) dan menerbitkan JWT. Kegagalan menghasilkan 401 generik
+        yang tidak membedakan username atau password yang salah.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: cashier
+              password: "<password demo dari README>"
+      responses:
+        '200':
+          description: Login berhasil.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              example:
+                accessToken: eyJhbGciOiJIUzI1NiJ9...
+                tokenType: Bearer
+                expiresIn: 28800
+                user:
+                  username: cashier
+                  role: CASHIER
+                  outletId: OUT-01
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ───────────────────────────── Outlets ─────────────────────────────
+  /api/v1/outlets:
+    get:
+      tags: [Outlets]
+      operationId: listOutlets
+      summary: Daftar outlet yang belum dihapus (urut berdasarkan id)
+      security: []
+      responses:
+        '200':
+          description: Daftar outlet.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Outlet'
+    post:
+      tags: [Outlets]
+      operationId: createOutlet
+      summary: Membuat outlet (Master)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OutletCreateRequest'
+            example:
+              id: OUT-03
+              name: Dikichi Malang Kota
+              address: Jl. Veteran No. 8, Malang
+      responses:
+        '201':
+          description: Dibuat.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Outlet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: "Id outlet sudah ada (termasuk yang sudah di-soft-delete). Kode `DUPLICATE_OUTLET_ID`."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/outlets/{outletId}:
+    parameters:
+      - $ref: '#/components/parameters/OutletId'
+    get:
+      tags: [Outlets]
+      operationId: getOutlet
+      summary: Detail satu outlet
+      security: []
+      responses:
+        '200':
+          description: Outlet.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Outlet'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Outlets]
+      operationId: replaceOutlet
+      summary: Mengganti outlet (Master)
+      description: Penggantian penuh field yang dapat diubah. Id diambil dari path dan tidak dapat berubah.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OutletReplaceRequest'
+            example:
+              name: Dikichi Malang Kota (Renovasi)
+              address: Jl. Veteran No. 10, Malang
+      responses:
+        '200':
+          description: Outlet berhasil diganti.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Outlet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Outlets]
+      operationId: deleteOutlet
+      summary: Soft delete outlet (Master)
+      description: Mengisi `is_deleted = true` tanpa cascade. Meja dan item menu outlet tersebut menjadi tidak
+        dapat dipakai karena validasi outlet gagal. Menghapus ulang menghasilkan `404`.
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ───────────────────────────── Tables ─────────────────────────────
+  /api/v1/outlets/{outletId}/tables:
+    parameters:
+      - $ref: '#/components/parameters/OutletId'
+    get:
+      tags: [Tables]
+      operationId: listTables
+      summary: Daftar meja outlet yang belum dihapus (urut berdasarkan kode)
+      security: []
+      responses:
+        '200':
+          description: Daftar meja.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Table'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Tables]
+      operationId: createTable
+      summary: Membuat meja (Master)
+      description: Meja tidak memiliki PUT karena satu-satunya field yang dapat diubah adalah kode (D6).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TableCreateRequest'
+            example:
+              code: T-11
+      responses:
+        '201':
+          description: Dibuat.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Table'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: "Meja aktif dengan kode ini sudah ada di outlet. Kode `DUPLICATE_TABLE_CODE`."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/outlets/{outletId}/tables/{code}:
+    parameters:
+      - $ref: '#/components/parameters/OutletId'
+      - $ref: '#/components/parameters/TableCode'
+    delete:
+      tags: [Tables]
+      operationId: deleteTable
+      summary: Soft delete meja (Master)
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ───────────────────────────── Menu Items ─────────────────────────────
+  /api/v1/outlets/{outletId}/menu-items:
+    parameters:
+      - $ref: '#/components/parameters/OutletId'
+    get:
+      tags: [Menu Items]
+      operationId: listMenuItems
+      summary: Daftar item menu outlet yang belum dihapus
+      description: Urut berdasarkan kategori lalu nama. Item tidak tersedia ikut ditampilkan dengan
+        `available = false`; UI pelanggan menampilkannya sebagai "Sold out" (D5).
+      security: []
+      responses:
+        '200':
+          description: Daftar item menu.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MenuItem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Menu Items]
+      operationId: createMenuItem
+      summary: Membuat item menu (Master)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemCreateRequest'
+            example:
+              name: Mie Suit Pedas
+              description: Mie dengan sambal level 3
+              price: 27000
+              category: Mie
+      responses:
+        '201':
+          description: Dibuat.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/menu-items/{menuItemId}:
+    parameters:
+      - $ref: '#/components/parameters/MenuItemId'
+    get:
+      tags: [Menu Items]
+      operationId: getMenuItem
+      summary: Detail satu item menu
+      security: []
+      responses:
+        '200':
+          description: Item menu.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Menu Items]
+      operationId: replaceMenuItem
+      summary: Mengganti item menu (Master)
+      description: Penggantian penuh termasuk `available` (D17). Item tetap berada di outletnya.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemReplaceRequest'
+            example:
+              name: Mie Suit Pedas
+              description: Mie dengan sambal level 5
+              price: 29000
+              category: Mie
+              available: true
+      responses:
+        '200':
+          description: Item menu berhasil diganti.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Menu Items]
+      operationId: deleteMenuItem
+      summary: Soft delete item menu (Master)
+      description: Item disembunyikan dari semua endpoint baca dan ditolak untuk pesanan baru. Pesanan lama
+        tetap menyimpan snapshot nama dan harga. Menghapus ulang menghasilkan `404`.
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/menu-items/{menuItemId}/availability:
+    parameters:
+      - $ref: '#/components/parameters/MenuItemId'
+    patch:
+      tags: [Menu Items]
+      operationId: patchMenuItemAvailability
+      summary: Mengubah ketersediaan (Master; Cashier dan Kitchen untuk outlet sendiri)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityPatchRequest'
+            example:
+              available: false
+      responses:
+        '200':
+          description: Item menu terbaru.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT HS256 dari POST /api/v1/auth/login. Kedaluwarsa setelah 8 jam. Tanpa refresh token.
+
+  headers:
+    Location:
+      description: URL resource yang baru dibuat, misalnya `/api/v2/orders/{id}`.
+      schema:
+        type: string
+        format: uri-reference
+
+  parameters:
+    OutletId:
+      name: outletId
+      in: path
+      required: true
+      description: Kunci outlet yang mudah dibaca (D7).
+      schema:
+        $ref: '#/components/schemas/OutletIdValue'
+    TableCode:
+      name: code
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/TableCodeValue'
+    MenuItemId:
+      name: menuItemId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      description: UUID pesanan (bukan nomor pesanan `ORD-xxxx`).
+      schema:
+        type: string
+        format: uuid
+    OrderOutletIdQuery:
+      name: outletId
+      in: query
+      required: false
+      description: Opsional. Default outlet dari JWT pemanggil. Nilai yang berbeda dari outlet pemanggil menghasilkan 403.
+      schema:
+        $ref: '#/components/schemas/OutletIdValue'
+    OrderStatusQuery:
+      name: status
+      in: query
+      required: false
+      description: |
+        Filter satu status. Bila tidak diisi, dipakai himpunan penuh milik role
+        (Cashier: PENDING, ACCEPTED. Kitchen: PREPARING, READY). Status di luar himpunan role menghasilkan 403.
+      schema:
+        $ref: '#/components/schemas/OrderStatus'
+
+  responses:
+    NoContent:
+      description: Terhapus (soft delete). Tanpa body.
+    BadRequest:
+      description: Body rusak atau validasi field gagal (`MALFORMED_REQUEST`, `VALIDATION_ERROR`, `DUPLICATE_MENU_ITEM`, `OUTLET_IMMUTABLE`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            v1BodyOnV2:
+              summary: Body v1 dikirim ke /api/v2/orders
+              value:
+                timestamp: "2026-11-12T10:00:00Z"
+                status: 400
+                code: VALIDATION_ERROR
+                message: Request validation failed
+                path: /api/v2/orders
+                errors:
+                  - field: customer
+                    message: must not be null
+                  - field: location
+                    message: must not be null
+            outletImmutable:
+              summary: PUT mencoba memindahkan outlet pesanan
+              value:
+                timestamp: "2026-11-12T10:00:00Z"
+                status: 400
+                code: OUTLET_IMMUTABLE
+                message: Order outlet cannot be changed
+                path: /api/v2/orders/7d3c0d4e-2f7a-4f63-9a51-0b8c2f3e9a10
+                errors:
+                  - field: location.outletId
+                    message: Order outlet cannot be changed
+    Unauthorized:
+      description: Token tidak ada atau tidak valid, atau login gagal (`UNAUTHORIZED`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2026-11-12T10:00:00Z"
+            status: 401
+            code: UNAUTHORIZED
+            message: Token is missing or invalid
+            path: /api/v2/orders
+            errors: []
+    Forbidden:
+      description: Pelanggaran role atau cakupan outlet (`FORBIDDEN`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource pada path tidak ada atau sudah di-soft-delete (`NOT_FOUND`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: |
+        Konflik status. Kode: `ITEM_UNAVAILABLE`, `INVALID_STATUS_TRANSITION`, `ORDER_NOT_EDITABLE`,
+        `CONCURRENT_MODIFICATION`, `ORDER_ALREADY_PAID`.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2026-11-12T10:00:00Z"
+            status: 409
+            code: ITEM_UNAVAILABLE
+            message: One or more items are unavailable
+            path: /api/v2/orders
+            errors:
+              - field: items[0].menuItemId
+                message: Item is unavailable
+    UnprocessableEntity:
+      description: Body merujuk entitas yang tidak valid (`INVALID_OUTLET`, `INVALID_TABLE`, `INVALID_MENU_ITEM`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ServiceUnavailable:
+      description: catalog-service tidak dapat dihubungi atau timeout (`CATALOG_UNAVAILABLE`). Tidak ada data yang disimpan.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  examples:
+    OrderPending:
+      summary: Pesanan baru (PENDING, belum dibayar)
+      value:
+        id: 7d3c0d4e-2f7a-4f63-9a51-0b8c2f3e9a10
+        orderNumber: ORD-0042
+        status: PENDING
+        customer:
+          name: Budi
+        location:
+          outletId: OUT-01
+          tableCode: T-01
+        items:
+          - menuItemId: 11111111-0000-4000-8000-000000000001
+            name: Mie Suit
+            unitPrice: 25000
+            quantity: 2
+            subtotal: 50000
+        paymentSummary:
+          totalAmount: 50000
+          paymentStatus: UNPAID
+          paymentMethod: null
+          amountTendered: null
+          change: null
+        createdAt: "2026-11-12T10:00:00Z"
+        updatedAt: "2026-11-12T10:00:00Z"
+    OrderPaidCash:
+      summary: Setelah dibayar tunai (PREPARING, PAID, ada kembalian)
+      value:
+        id: 7d3c0d4e-2f7a-4f63-9a51-0b8c2f3e9a10
+        orderNumber: ORD-0042
+        status: PREPARING
+        customer:
+          name: Budi
+        location:
+          outletId: OUT-01
+          tableCode: T-01
+        items:
+          - menuItemId: 11111111-0000-4000-8000-000000000001
+            name: Mie Suit
+            unitPrice: 25000
+            quantity: 2
+            subtotal: 50000
+        paymentSummary:
+          totalAmount: 50000
+          paymentStatus: PAID
+          paymentMethod: CASH
+          amountTendered: 60000
+          change: 10000
+        createdAt: "2026-11-12T10:00:00Z"
+        updatedAt: "2026-11-12T10:03:12Z"
+    OrderPaidQris:
+      summary: Setelah dibayar QRIS (amountTendered dan change null)
+      value:
+        id: 7d3c0d4e-2f7a-4f63-9a51-0b8c2f3e9a10
+        orderNumber: ORD-0042
+        status: PREPARING
+        customer:
+          name: Budi
+        location:
+          outletId: OUT-01
+          tableCode: T-01
+        items:
+          - menuItemId: 11111111-0000-4000-8000-000000000001
+            name: Mie Suit
+            unitPrice: 25000
+            quantity: 2
+            subtotal: 50000
+        paymentSummary:
+          totalAmount: 50000
+          paymentStatus: PAID
+          paymentMethod: QRIS
+          amountTendered: null
+          change: null
+        createdAt: "2026-11-12T10:00:00Z"
+        updatedAt: "2026-11-12T10:03:12Z"
+
+  schemas:
+    OutletIdValue:
+      type: string
+      pattern: '^OUT-\d{2,}$'
+      examples: [OUT-01]
+    TableCodeValue:
+      type: string
+      pattern: '^T-\d{2,3}$'
+      examples: [T-01]
+    Role:
+      type: string
+      enum: [MASTER, CASHIER, KITCHEN]
+    OrderStatus:
+      type: string
+      enum: [PENDING, ACCEPTED, PREPARING, READY, COMPLETED, CANCELLED]
+    PaymentMethod:
+      type: string
+      enum: [CASH, QRIS, CARD]
+    PaymentStatus:
+      type: string
+      enum: [UNPAID, PAID]
+
+    ErrorResponse:
+      type: object
+      required: [timestamp, status, code, message, path, errors]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        code:
+          type: string
+          description: Kode stabil yang dapat dibaca mesin. Lihat katalog kesalahan di API-Specification.md.
+        message:
+          type: string
+          description: Pesan untuk manusia. Tidak pernah memuat stack trace atau detail internal.
+        path:
+          type: string
+        errors:
+          type: array
+          description: Selalu ada; array kosong bila tidak ada kesalahan tingkat field.
+          items:
+            $ref: '#/components/schemas/FieldError'
+    FieldError:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          examples: ["location.tableCode"]
+        message:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 50
+        password:
+          type: string
+          minLength: 1
+          maxLength: 100
+    LoginResponse:
+      type: object
+      required: [accessToken, tokenType, expiresIn, user]
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          const: Bearer
+        expiresIn:
+          type: integer
+          description: Detik sampai kedaluwarsa (28800 = 8 jam).
+        user:
+          $ref: '#/components/schemas/StaffIdentity'
+    StaffIdentity:
+      type: object
+      required: [username, role, outletId]
+      properties:
+        username:
+          type: string
+        role:
+          $ref: '#/components/schemas/Role'
+        outletId:
+          type: [string, 'null']
+          description: Null untuk MASTER.
+
+    Outlet:
+      type: object
+      required: [id, name, address]
+      properties:
+        id:
+          $ref: '#/components/schemas/OutletIdValue'
+        name:
+          type: string
+        address:
+          type: string
+    OutletCreateRequest:
+      type: object
+      required: [id, name, address]
+      description: Id outlet diberikan oleh klien (D17).
+      properties:
+        id:
+          $ref: '#/components/schemas/OutletIdValue'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        address:
+          type: string
+          minLength: 1
+          maxLength: 255
+    OutletReplaceRequest:
+      type: object
+      required: [name, address]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        address:
+          type: string
+          minLength: 1
+          maxLength: 255
+    Table:
+      type: object
+      required: [id, outletId, code]
+      properties:
+        id:
+          type: string
+          format: uuid
+        outletId:
+          $ref: '#/components/schemas/OutletIdValue'
+        code:
+          $ref: '#/components/schemas/TableCodeValue'
+    TableCreateRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          $ref: '#/components/schemas/TableCodeValue'
+
+    MenuItem:
+      type: object
+      required: [id, outletId, name, description, price, category, available]
+      properties:
+        id:
+          type: string
+          format: uuid
+        outletId:
+          $ref: '#/components/schemas/OutletIdValue'
+        name:
+          type: string
+        description:
+          type: [string, 'null']
+        price:
+          type: integer
+          description: Rupiah, bilangan bulat.
+        category:
+          type: string
+        available:
+          type: boolean
+    MenuItemCreateRequest:
+      type: object
+      description: "`available` bernilai true bila tidak dikirim (D17)."
+      required: [name, price, category]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: [string, 'null']
+          maxLength: 500
+        price:
+          type: integer
+          minimum: 1
+          maximum: 10000000
+        category:
+          type: string
+          minLength: 1
+          maxLength: 50
+        available:
+          type: boolean
+    MenuItemReplaceRequest:
+      type: object
+      description: Penggantian penuh; `available` wajib (D17).
+      required: [name, price, category, available]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: [string, 'null']
+          maxLength: 500
+        price:
+          type: integer
+          minimum: 1
+          maximum: 10000000
+        category:
+          type: string
+          minLength: 1
+          maxLength: 50
+        available:
+          type: boolean
+    AvailabilityPatchRequest:
+      type: object
+      required: [available]
+      properties:
+        available:
+          type: boolean
+
+    OrderItemRequest:
+      type: object
+      required: [menuItemId, quantity]
+      description: Bentuk sama di v1 dan v2. Harga yang dikirim klien diabaikan.
+      properties:
+        menuItemId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+    OrderItemResponse:
+      type: object
+      required: [menuItemId, name, unitPrice, quantity, subtotal]
+      description: Bentuk sama di v1 dan v2. `name` dan `unitPrice` adalah snapshot saat create atau PUT.
+      properties:
+        menuItemId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        unitPrice:
+          type: integer
+        quantity:
+          type: integer
+        subtotal:
+          type: integer
+          format: int64
+    OrderItemList:
+      type: array
+      minItems: 1
+      maxItems: 30
+      description: 1 sampai 30 baris. `menuItemId` duplikat menghasilkan 400 `DUPLICATE_MENU_ITEM` (tidak digabung).
+      items:
+        $ref: '#/components/schemas/OrderItemRequest'
+    OrderStatusPatchRequest:
+      type: object
+      required: [status]
+      description: Identik di v1 dan v2 (DTO bersama `dto.common`).
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+    PaymentRequest:
+      type: object
+      required: [paymentMethod]
+      description: |
+        Identik di v1 dan v2 (DTO bersama `dto.common`). `amountTendered` wajib untuk CASH dan harus ≥ total.
+        Harus null atau tidak dikirim untuk QRIS dan CARD.
+      properties:
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        amountTendered:
+          type: [integer, 'null']
+          format: int64
+          minimum: 1
+
+    V2Customer:
+      type: object
+      required: [name]
+      description: Identitas pelanggan. Baru di v2 (menggantikan `customerName` v1).
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Di-trim oleh server sebelum validasi.
+    V2Location:
+      type: object
+      required: [outletId, tableCode]
+      description: Lokasi meja. Baru di v2 (menggantikan `outletId` dan `tableCode` v1 di root).
+      properties:
+        outletId:
+          $ref: '#/components/schemas/OutletIdValue'
+        tableCode:
+          $ref: '#/components/schemas/TableCodeValue'
+    V2PaymentSummary:
+      type: object
+      required: [totalAmount, paymentStatus, paymentMethod, amountTendered, change]
+      description: |
+        Baru di v2. `totalAmount` pindah dari root v1 ke sini.
+        `paymentMethod`, `amountTendered`, `change` bernilai null sampai dibayar;
+        `amountTendered` dan `change` tetap null untuk QRIS dan CARD.
+      properties:
+        totalAmount:
+          type: integer
+          format: int64
+        paymentStatus:
+          $ref: '#/components/schemas/PaymentStatus'
+        paymentMethod:
+          oneOf:
+            - $ref: '#/components/schemas/PaymentMethod'
+            - type: 'null'
+        amountTendered:
+          type: [integer, 'null']
+          format: int64
+        change:
+          type: [integer, 'null']
+          format: int64
+    V2OrderRequest:
+      type: object
+      required: [customer, location, items]
+      description: |
+        Kontrak bersarang untuk POST dan PUT.
+        Pada PUT, `location.outletId` harus sama dengan outlet pesanan saat ini (`400 OUTLET_IMMUTABLE`, D16).
+      properties:
+        customer:
+          $ref: '#/components/schemas/V2Customer'
+        location:
+          $ref: '#/components/schemas/V2Location'
+        items:
+          $ref: '#/components/schemas/OrderItemList'
+    V2OrderResponse:
+      type: object
+      required: [id, orderNumber, status, customer, location, items, paymentSummary, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        orderNumber:
+          type: string
+          pattern: '^ORD-\d{4,}$'
+          examples: [ORD-0042]
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        customer:
+          $ref: '#/components/schemas/V2Customer'
+        location:
+          $ref: '#/components/schemas/V2Location'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemResponse'
+        paymentSummary:
+          $ref: '#/components/schemas/V2PaymentSummary'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
