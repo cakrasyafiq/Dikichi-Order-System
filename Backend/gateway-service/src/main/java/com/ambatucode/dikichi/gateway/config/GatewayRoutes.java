@@ -15,7 +15,7 @@ public class GatewayRoutes {
                         .path("/api/v1/auth/**", "/api/v1/outlets/**", "/api/v1/menu-items/**")
                         .uri(upstream.catalog()))
                 .route("order-service", route -> route
-                        .path("/api/v1/orders/**")
+                        .path("/api/v1/orders/**", "/api/v2/orders/**")
                         .uri(upstream.order()))
                 .build();
     }

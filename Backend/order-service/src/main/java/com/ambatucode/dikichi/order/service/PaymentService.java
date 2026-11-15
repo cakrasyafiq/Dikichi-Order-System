@@ -10,8 +10,13 @@ import com.ambatucode.dikichi.order.entity.Role;
 import com.ambatucode.dikichi.order.exception.ApiException;
 import com.ambatucode.dikichi.order.repository.MockPaymentRepository;
 import com.ambatucode.dikichi.order.repository.OrderRepository;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +55,21 @@ public class PaymentService {
 
         order.markPreparing();
         return orders.saveAndFlush(order);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<MockPayment> findByOrderId(UUID orderId) {
+        return payments.findByOrderId(orderId);
+    }
+
+    // WHY: one IN query for a whole queue avoids an N+1 lookup when listing orders in the v2 shape
+    @Transactional(readOnly = true)
+    public Map<UUID, MockPayment> findByOrderIds(Collection<UUID> orderIds) {
+        if (orderIds.isEmpty()) {
+            return Map.of();
+        }
+        return payments.findByOrderIdIn(orderIds).stream()
+                .collect(Collectors.toMap(MockPayment::getOrderId, Function.identity()));
     }
 
     private static void validateTender(Order order, PaymentRequest request) {

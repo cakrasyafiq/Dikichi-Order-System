@@ -33,7 +33,7 @@ public class SecurityConfig {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
                         // WHY: exact path for POST orders, so POST /orders/{id}/pay stays protected
-                        .pathMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/orders").permitAll()
+                        .pathMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/orders", "/api/v2/orders").permitAll()
                         .pathMatchers(HttpMethod.GET, "/api/v1/outlets/**", "/api/v1/menu-items/**").permitAll()
                         .pathMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**").permitAll()
                         .pathMatchers("/internal/**").permitAll()

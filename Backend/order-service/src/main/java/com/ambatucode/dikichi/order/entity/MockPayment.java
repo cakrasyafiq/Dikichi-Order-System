@@ -68,4 +68,8 @@ public class MockPayment {
     public Long getChangeAmount() {
         return changeAmount;
     }
+
+    public Long getAmountTendered() {
+        return amountTendered;
+    }
 }

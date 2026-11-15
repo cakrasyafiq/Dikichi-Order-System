@@ -9,7 +9,7 @@ Backend platform pemesanan makanan berbasis layanan (Spring Boot, PostgreSQL, Do
 | order-service | 8082 (internal) | Pesanan dan pembayaran tiruan |
 | catalog-db, order-db | 5432 (internal) | PostgreSQL 16, satu basis data per layanan |
 
-Seluruh API diakses melalui gateway di `http://localhost:8080/api/v1`.
+Seluruh API diakses melalui gateway di `http://localhost:8080`. Resource Order tersedia di dua versi yang berjalan berdampingan: `/api/v1/orders` (kontrak datar) dan `/api/v2/orders` (kontrak bersarang dengan `customer`, `location`, dan `paymentSummary`). Autentikasi, outlet, meja, dan menu tetap di `/api/v1`.
 
 ## Prasyarat
 
@@ -205,4 +205,29 @@ Dikichi-Order-System/
     catalog-service/
     order-service/
   Documents/          dokumen spesifikasi dan laporan pengujian
+```
+
+## API v2 (Order): GET dan POST
+
+Iterasi 10 mengimplementasikan `POST /api/v2/orders`, `GET /api/v2/orders`, `GET /api/v2/orders/{orderId}`, dan `POST /api/v2/orders/{orderId}/pay`. PUT, PATCH, dan DELETE v2 menyusul pada iterasi berikutnya. Kontrak lengkap ada di `Documents/openapi-v2.yaml`, penjelasan implementasi di `Documents/Laporan/bab_10_implementasi_api_versi_2_0_get_post.md`.
+
+Setelah memperbarui kode, bangun ulang dua layanan yang berubah:
+
+```powershell
+cd Backend
+docker compose --env-file ../.env up -d --build order-service gateway-service
+```
+
+Uji unit order-service (JUnit, tanpa perlu Java di host):
+
+```powershell
+cd Backend/order-service
+docker run --rm -v "${PWD}:/w" -v dikichi-m2:/root/.m2 -w /w maven:3.9-eclipse-temurin-21 mvn -B test
+```
+
+Uji API v2 dengan Newman (basis data dalam keadaan bersih lebih disarankan karena pesanan baru dibuat pada tiap putaran):
+
+```powershell
+cd Backend/tests/api
+./run-newman.ps1 -Collection dikichi-v2-get-post.postman_collection.json
 ```
