@@ -1,6 +1,6 @@
 # BAB 10. IMPLEMENTASI API VERSI 2.0 (GET & POST)
 
-Bab ini memuat implementasi **API versi 2.0 (/api/v2)** untuk operasi **GET** dan **POST** pada resource **Order**, sebagaimana dispesifikasikan pada Bab 9 dan dijelaskan alasan transisinya pada Bab 8. Pembahasan mencakup properti *build*, konfigurasi *deployment*, dan kode sumber utama yang berkaitan langsung dengan kedua metode tersebut. Operasi **PUT**, **PATCH**, dan **DELETE** versi 2.0 belum diimplementasikan pada iterasi ini dan menjadi cakupan iterasi berikutnya.
+Bab ini memuat implementasi **API versi 2.0 (/api/v2)** untuk operasi **GET** dan **POST** pada resource **Order**, sebagaimana dispesifikasikan pada Bab 9 dan dijelaskan alasan transisinya pada Bab 8. Pembahasan mencakup properti *build*, konfigurasi *deployment*, dan kode sumber utama yang berkaitan langsung dengan kedua metode tersebut. Operasi **PUT**, **PATCH**, dan **DELETE** versi 2.0 diimplementasikan pada iterasi berikutnya dan dibahas pada Bab 11.
 
 ## 10.1 Gambaran Implementasi
 
@@ -624,6 +624,6 @@ cd ../tests/api
 
 ## 10.8 Batasan Iterasi Ini
 
-- **PUT**, **PATCH**, dan **DELETE** pada **/api/v2/orders** belum dipetakan. Sebelum iterasi berikutnya, **PUT** dan **DELETE** pada /api/v2/orders/{id} dijawab **405 METHOD_NOT_ALLOWED**, sedangkan **PATCH** pada /api/v2/orders/{id}/status dijawab **404 NOT_FOUND** oleh order-service. Pesanan tetap dapat diubah statusnya melalui **/api/v1/orders/{id}/status** karena data pesanan dipakai bersama.
-- Prasyarat pembayaran (PENDING menjadi ACCEPTED) pada skenario uji masih memakai **PATCH /api/v1/orders/{id}/status**, sampai PATCH v2 diimplementasikan.
+- **PUT**, **PATCH**, dan **DELETE** pada **/api/v2/orders** belum dipetakan pada iterasi ini. Pada saat itu **PUT** dan **DELETE** pada /api/v2/orders/{id} dijawab **405 METHOD_NOT_ALLOWED**, sedangkan **PATCH** pada /api/v2/orders/{id}/status dijawab **404 NOT_FOUND** oleh order-service. Pemetaan ketiganya diimplementasikan pada iterasi berikutnya (Bab 11).
+- Prasyarat pembayaran (PENDING menjadi ACCEPTED) pada skenario uji koleksi GET dan POST memakai **PATCH /api/v1/orders/{id}/status**, karena PATCH v2 baru diimplementasikan pada Bab 11.
 - Respons v2 dibentuk dari entitas dan baris **mock_payment** pada saat permintaan, sehingga tidak ada kolom status pembayaran tersimpan yang dapat tidak sinkron.

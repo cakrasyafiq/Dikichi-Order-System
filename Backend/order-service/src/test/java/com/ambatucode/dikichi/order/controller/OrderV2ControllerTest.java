@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.ambatucode.dikichi.order.controller.v2.OrderV2Controller;
 import com.ambatucode.dikichi.order.dto.common.OrderItemRequest;
+import com.ambatucode.dikichi.order.dto.common.OrderStatusPatchRequest;
 import com.ambatucode.dikichi.order.dto.common.PaymentRequest;
 import com.ambatucode.dikichi.order.dto.v2.PaymentStatus;
 import com.ambatucode.dikichi.order.dto.v2.V2OrderRequest;
@@ -20,6 +21,8 @@ import com.ambatucode.dikichi.order.entity.PaymentMethod;
 import com.ambatucode.dikichi.order.service.CreateOrderCommand;
 import com.ambatucode.dikichi.order.service.OrderService;
 import com.ambatucode.dikichi.order.service.PaymentService;
+import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,6 +32,9 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 
 class OrderV2ControllerTest {
 
@@ -125,5 +131,65 @@ class OrderV2ControllerTest {
         assertThat(response.paymentSummary().paymentStatus()).isEqualTo(PaymentStatus.PAID);
         assertThat(response.paymentSummary().amountTendered()).isEqualTo(60000L);
         assertThat(response.paymentSummary().change()).isEqualTo(10000L);
+    }
+
+    @Test
+    void replaceDelegatesNestedRequestAndReturnsUnpaidV2Body() {
+        Order replaced = order("ORD-0006", OrderStatus.PENDING);
+        when(orderService.replace(org.mockito.ArgumentMatchers.eq(replaced.getId()),
+                org.mockito.ArgumentMatchers.any(CreateOrderCommand.class))).thenReturn(replaced);
+        V2OrderRequest request = new V2OrderRequest(new V2OrderRequest.Customer("Budi Santoso"),
+                new V2OrderRequest.Location("OUT-01", "T-05"), List.of(new OrderItemRequest(MENU_MIE, 1)));
+
+        V2OrderResponse response = controller.replace(replaced.getId(), request);
+
+        ArgumentCaptor<CreateOrderCommand> captor = ArgumentCaptor.forClass(CreateOrderCommand.class);
+        verify(orderService).replace(org.mockito.ArgumentMatchers.eq(replaced.getId()), captor.capture());
+        assertThat(captor.getValue().outletId()).isEqualTo("OUT-01");
+        assertThat(captor.getValue().tableCode()).isEqualTo("T-05");
+        assertThat(captor.getValue().customerName()).isEqualTo("Budi Santoso");
+        assertThat(response.id()).isEqualTo(replaced.getId());
+        assertThat(response.status()).isEqualTo(OrderStatus.PENDING);
+        assertThat(response.paymentSummary().paymentStatus()).isEqualTo(PaymentStatus.UNPAID);
+        verify(paymentService, never()).findByOrderId(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void updateStatusReturnsUnpaidSummaryWhenOrderIsCancelledWithoutPayment() {
+        Order cancelled = order("ORD-0007", OrderStatus.CANCELLED);
+        OrderStatusPatchRequest request = new OrderStatusPatchRequest("CANCELLED");
+        when(orderService.updateStatus(cancelled.getId(), request)).thenReturn(cancelled);
+        when(paymentService.findByOrderId(cancelled.getId())).thenReturn(Optional.empty());
+
+        V2OrderResponse response = controller.updateStatus(cancelled.getId(), request);
+
+        assertThat(response.status()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(response.paymentSummary().paymentStatus()).isEqualTo(PaymentStatus.UNPAID);
+        assertThat(response.paymentSummary().paymentMethod()).isNull();
+    }
+
+    @Test
+    void updateStatusReturnsPaidSummaryWhenOrderAlreadyHasPayment() {
+        Order ready = order("ORD-0008", OrderStatus.READY);
+        OrderStatusPatchRequest request = new OrderStatusPatchRequest("READY");
+        when(orderService.updateStatus(ready.getId(), request)).thenReturn(ready);
+        when(paymentService.findByOrderId(ready.getId())).thenReturn(Optional.of(
+                new MockPayment(ready.getId(), PaymentMethod.CASH, 60000L, 10000L, 50000L)));
+
+        V2OrderResponse response = controller.updateStatus(ready.getId(), request);
+
+        assertThat(response.status()).isEqualTo(OrderStatus.READY);
+        assertThat(response.paymentSummary().paymentStatus()).isEqualTo(PaymentStatus.PAID);
+        assertThat(response.paymentSummary().change()).isEqualTo(10000L);
+    }
+
+    @Test
+    void controllerMapsPutAndPatchButNeverDelete() {
+        List<Method> methods = Arrays.asList(OrderV2Controller.class.getDeclaredMethods());
+
+        assertThat(methods).anyMatch(method -> method.isAnnotationPresent(PutMapping.class));
+        assertThat(methods).anyMatch(method -> method.isAnnotationPresent(PatchMapping.class));
+        // WHY: orders are financial records, so DELETE must stay unmapped and answer 405 METHOD_NOT_ALLOWED
+        assertThat(methods).noneMatch(method -> method.isAnnotationPresent(DeleteMapping.class));
     }
 }

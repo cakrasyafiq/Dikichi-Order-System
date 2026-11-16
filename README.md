@@ -109,7 +109,7 @@ Hasil yang diharapkan di akhir keluaran masing-masing:
 
 | Layanan | Hasil yang diharapkan |
 | :--- | :--- |
-| order-service | `Tests run: 47, Failures: 0, Errors: 0, Skipped: 0` dan `BUILD SUCCESS` |
+| order-service | `Tests run: 70, Failures: 0, Errors: 0, Skipped: 0` dan `BUILD SUCCESS` |
 | catalog-service | `Tests run: 56, Failures: 0, Errors: 0, Skipped: 0` dan `BUILD SUCCESS` |
 
 ### b. Uji API black-box (Newman)
@@ -200,6 +200,8 @@ Dikichi-Order-System/
     tests/api/
       dikichi-v1-get-post.postman_collection.json
       dikichi-v1-put-patch-delete.postman_collection.json
+      dikichi-v2-get-post.postman_collection.json
+      dikichi-v2-put-patch-delete.postman_collection.json
       run-newman.ps1
     gateway-service/
     catalog-service/
@@ -207,15 +209,15 @@ Dikichi-Order-System/
   Documents/          dokumen spesifikasi dan laporan pengujian
 ```
 
-## API v2 (Order): GET dan POST
+## API v2 (Order): GET, POST, PUT, PATCH, dan DELETE
 
-Iterasi 10 mengimplementasikan `POST /api/v2/orders`, `GET /api/v2/orders`, `GET /api/v2/orders/{orderId}`, dan `POST /api/v2/orders/{orderId}/pay`. PUT, PATCH, dan DELETE v2 menyusul pada iterasi berikutnya. Kontrak lengkap ada di `Documents/openapi-v2.yaml`, penjelasan implementasi di `Documents/Laporan/bab_10_implementasi_api_versi_2_0_get_post.md`.
+Iterasi 10 mengimplementasikan `POST /api/v2/orders`, `GET /api/v2/orders`, `GET /api/v2/orders/{orderId}`, dan `POST /api/v2/orders/{orderId}/pay`. Iterasi 11 menambahkan `PUT /api/v2/orders/{orderId}` dan `PATCH /api/v2/orders/{orderId}/status`. `DELETE /api/v2/orders/{orderId}` sengaja tidak dipetakan dan dijawab `405 METHOD_NOT_ALLOWED` (pembatalan memakai PATCH status `CANCELLED`). Kontrak lengkap ada di `Documents/openapi-v2.yaml`, penjelasan implementasi di `Documents/Laporan/bab_10_implementasi_api_versi_2_0_get_post.md` dan `Documents/Laporan/bab_11_implementasi_api_versi_2_0_put_patch_delete.md`.
 
-Setelah memperbarui kode, bangun ulang dua layanan yang berubah:
+Setelah memperbarui kode, bangun ulang layanan yang berubah. Iterasi 11 hanya mengubah `order-service`:
 
 ```powershell
 cd Backend
-docker compose --env-file ../.env up -d --build order-service gateway-service
+docker compose --env-file ../.env up -d --build order-service
 ```
 
 Uji unit order-service (JUnit, tanpa perlu Java di host):
@@ -230,4 +232,10 @@ Uji API v2 dengan Newman (basis data dalam keadaan bersih lebih disarankan karen
 ```powershell
 cd Backend/tests/api
 ./run-newman.ps1 -Collection dikichi-v2-get-post.postman_collection.json
+```
+
+Uji API v2 untuk PUT, PATCH, dan DELETE (55 request, 250 asersi, hasil eksekusi: 0 gagal):
+
+```powershell
+./run-newman.ps1 -Collection dikichi-v2-put-patch-delete.postman_collection.json
 ```
