@@ -234,6 +234,8 @@ cd Backend/tests/api
 ./run-newman.ps1 -Collection dikichi-v2-get-post.postman_collection.json
 ```
 
+Keluaran lengkap pengujian Iterasi 12 (kedua koleksi v2 dan uji unit) beserta tangkapan layarnya tersimpan pada `Backend/tests/api/hasil`.
+
 Uji API v2 untuk PUT, PATCH, dan DELETE (55 request, 250 asersi, hasil eksekusi: 0 gagal):
 
 ```powershell

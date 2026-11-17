@@ -1,0 +1,305 @@
+newman
+
+Dikichi Order System - Pengujian API v2.0 (GET dan POST)
+
+❏ 00 Autentikasi (POST /api/v1/auth/login)
+↳ Login MASTER
+  POST http://host.docker.internal:8080/api/v1/auth/login [200 OK, 580B, 678ms]
+  ✓  Status 200
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Content-Type JSON
+  ✓  Token tersedia
+
+↳ Login CASHIER
+  POST http://host.docker.internal:8080/api/v1/auth/login [200 OK, 616B, 80ms]
+  ✓  Status 200
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Content-Type JSON
+  ✓  Token tersedia
+
+↳ Login KITCHEN
+  POST http://host.docker.internal:8080/api/v1/auth/login [200 OK, 616B, 71ms]
+  ✓  Status 200
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Content-Type JSON
+  ✓  Token tersedia
+
+❏ 01 Order v2 POST (POST /api/v2/orders)
+↳ POST pesanan v2 oleh tamu tanpa token
+  POST http://host.docker.internal:8080/api/v2/orders [201 Created, 873B, 387ms]
+  ✓  Status 201
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Content-Type JSON
+  ✓  Header Location menunjuk pesanan v2
+  ✓  ID UUID dan nomor ORD-
+  ✓  Status awal PENDING
+  ✓  Data pelanggan dan lokasi bersarang
+  ✓  Medan datar v1 tidak ada
+  ✓  Snapshot item dan subtotal
+  ✓  paymentSummary UNPAID dengan medan pembayaran null
+
+↳ POST pesanan dengan body datar v1
+  POST http://host.docker.internal:8080/api/v2/orders [400 Bad Request, 573B, 46ms]
+  ✓  Status 400
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan VALIDATION_ERROR
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Medan customer dan location dilaporkan
+
+↳ POST pesanan dengan nama pelanggan kosong
+  POST http://host.docker.internal:8080/api/v2/orders [400 Bad Request, 529B, 19ms]
+  ✓  Status 400
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan VALIDATION_ERROR
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Path medan bersarang
+
+↳ POST pesanan dengan format outlet salah
+  POST http://host.docker.internal:8080/api/v2/orders [400 Bad Request, 544B, 20ms]
+  ✓  Status 400
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan VALIDATION_ERROR
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Path medan bersarang
+
+↳ POST pesanan dengan format meja salah
+  POST http://host.docker.internal:8080/api/v2/orders [400 Bad Request, 544B, 17ms]
+  ✓  Status 400
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan VALIDATION_ERROR
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Path medan bersarang
+
+↳ POST pesanan tanpa item
+  POST http://host.docker.internal:8080/api/v2/orders [400 Bad Request, 533B, 21ms]
+  ✓  Status 400
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan VALIDATION_ERROR
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ POST pesanan dengan jumlah 100
+  POST http://host.docker.internal:8080/api/v2/orders [400 Bad Request, 548B, 18ms]
+  ✓  Status 400
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan VALIDATION_ERROR
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ POST pesanan dengan item ganda
+  POST http://host.docker.internal:8080/api/v2/orders [400 Bad Request, 554B, 16ms]
+  ✓  Status 400
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan DUPLICATE_MENU_ITEM
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ POST pesanan dengan JSON rusak
+  POST http://host.docker.internal:8080/api/v2/orders [400 Bad Request, 475B, 15ms]
+  ✓  Status 400
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan MALFORMED_REQUEST
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ POST pesanan berisi item sold out
+  POST http://host.docker.internal:8080/api/v2/orders [409 Conflict, 542B, 41ms]
+  ✓  Status 409
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan ITEM_UNAVAILABLE
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Item bermasalah dilaporkan
+
+↳ POST pesanan dengan meja yang tidak ada
+  POST http://host.docker.internal:8080/api/v2/orders [422 Unprocessable Entity, 559B, 28ms]
+  ✓  Status 422
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan INVALID_TABLE
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ POST pesanan dengan outlet yang tidak ada
+  POST http://host.docker.internal:8080/api/v2/orders [422 Unprocessable Entity, 531B, 23ms]
+  ✓  Status 422
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan INVALID_OUTLET
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ POST pesanan dengan item yang tidak ada
+  POST http://host.docker.internal:8080/api/v2/orders [422 Unprocessable Entity, 566B, 24ms]
+  ✓  Status 422
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan INVALID_MENU_ITEM
+  ✓  Waktu respons di bawah 2000 ms
+
+❏ 02 Order v2 GET
+↳ GET daftar pesanan v2 tanpa token
+  GET http://host.docker.internal:8080/api/v2/orders [401 Unauthorized, 428B, 15ms]
+  ✓  Status 401
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan UNAUTHORIZED
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ GET daftar pesanan v2 oleh CASHIER
+  GET http://host.docker.internal:8080/api/v2/orders [200 OK, 800B, 351ms]
+  ✓  Status 200
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Content-Type JSON
+  ✓  Memuat pesanan v2 yang baru dibuat
+  ✓  Setiap elemen berbentuk v2
+  ✓  Hanya antrean PENDING dan ACCEPTED
+  ✓  Urut dari yang terlama
+
+↳ GET pesanan v2 berstatus PREPARING oleh CASHIER
+  GET http://host.docker.internal:8080/api/v2/orders?status=PREPARING [403 Forbidden, 480B, 20ms]
+  ✓  Status 403
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan FORBIDDEN
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ GET pesanan v2 dengan status tidak dikenal
+  GET http://host.docker.internal:8080/api/v2/orders?status=TIDAK_ADA [400 Bad Request, 518B, 18ms]
+  ✓  Status 400
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan VALIDATION_ERROR
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ GET pesanan v2 outlet lain oleh CASHIER
+  GET http://host.docker.internal:8080/api/v2/orders?outletId=OUT-02 [403 Forbidden, 474B, 19ms]
+  ✓  Status 403
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan FORBIDDEN
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ GET daftar pesanan v2 oleh MASTER
+  GET http://host.docker.internal:8080/api/v2/orders [403 Forbidden, 482B, 14ms]
+  ✓  Status 403
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan FORBIDDEN
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ GET pesanan v2 berdasarkan ID
+  GET http://host.docker.internal:8080/api/v2/orders/24f0a516-a648-4083-8e53-e901b942a10b [200 OK, 798B, 28ms]
+  ✓  Status 200
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Content-Type JSON
+  ✓  Kontrak v2 bersarang
+  ✓  Medan datar v1 tidak ada
+  ✓  ID sesuai dan UNPAID
+
+↳ GET pesanan v2 yang tidak ada
+  GET http://host.docker.internal:8080/api/v2/orders/40cdc171-b206-4d87-af55-f1f4c084f7f8 [404 Not Found, 492B, 23ms]
+  ✓  Status 404
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan NOT_FOUND
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ GET pesanan v2 dengan ID bukan UUID
+  GET http://host.docker.internal:8080/api/v2/orders/bukan-uuid [400 Bad Request, 530B, 14ms]
+  ✓  Status 400
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan VALIDATION_ERROR
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ GET pesanan buatan v2 dibaca lewat v1 (datar)
+  GET http://host.docker.internal:8080/api/v1/orders/24f0a516-a648-4083-8e53-e901b942a10b [200 OK, 679B, 23ms]
+  ✓  Status 200
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Content-Type JSON
+  ✓  Bentuk v1 datar
+
+❏ 03 Pembayaran v2 (POST /api/v2/orders/{id}/pay)
+↳ Prasyarat: CASHIER menerima pesanan (PATCH v1 status)
+  PATCH http://host.docker.internal:8080/api/v1/orders/24f0a516-a648-4083-8e53-e901b942a10b/status [200 OK, 680B, 32ms]
+  ✓  Status 200
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Content-Type JSON
+  ✓  Status menjadi ACCEPTED
+
+↳ POST pay v2 tanpa token
+  POST http://host.docker.internal:8080/api/v2/orders/24f0a516-a648-4083-8e53-e901b942a10b/pay [401 Unauthorized, 469B, 6ms]
+  ✓  Status 401
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan UNAUTHORIZED
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ POST pay v2 oleh KITCHEN
+  POST http://host.docker.internal:8080/api/v2/orders/24f0a516-a648-4083-8e53-e901b942a10b/pay [403 Forbidden, 523B, 21ms]
+  ✓  Status 403
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan FORBIDDEN
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ POST pay v2 CASH dengan uang kurang
+  POST http://host.docker.internal:8080/api/v2/orders/24f0a516-a648-4083-8e53-e901b942a10b/pay [400 Bad Request, 595B, 18ms]
+  ✓  Status 400
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan VALIDATION_ERROR
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ POST pay v2 CARD dengan amountTendered
+  POST http://host.docker.internal:8080/api/v2/orders/24f0a516-a648-4083-8e53-e901b942a10b/pay [400 Bad Request, 584B, 19ms]
+  ✓  Status 400
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan VALIDATION_ERROR
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ POST pay v2 dengan metode tidak dikenal
+  POST http://host.docker.internal:8080/api/v2/orders/24f0a516-a648-4083-8e53-e901b942a10b/pay [400 Bad Request, 516B, 15ms]
+  ✓  Status 400
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan MALFORMED_REQUEST
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ POST pay v2 CASH dengan uang cukup
+  POST http://host.docker.internal:8080/api/v2/orders/24f0a516-a648-4083-8e53-e901b942a10b/pay [200 OK, 805B, 33ms]
+  ✓  Status 200
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Content-Type JSON
+  ✓  Kontrak v2 bersarang
+  ✓  Medan datar v1 tidak ada
+  ✓  Pesanan berpindah ke PREPARING
+  ✓  paymentSummary PAID tunai lengkap
+
+↳ POST pay v2 untuk kedua kalinya
+  POST http://host.docker.internal:8080/api/v2/orders/24f0a516-a648-4083-8e53-e901b942a10b/pay [409 Conflict, 516B, 19ms]
+  ✓  Status 409
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan ORDER_ALREADY_PAID
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ POST pay v2 pada pesanan yang tidak ada
+  POST http://host.docker.internal:8080/api/v2/orders/a41399f1-174b-4ea2-8370-c8e3d7abee9e/pay [404 Not Found, 496B, 19ms]
+  ✓  Status 404
+  ✓  Format kesalahan seragam
+  ✓  Kode kesalahan NOT_FOUND
+  ✓  Waktu respons di bawah 2000 ms
+
+↳ GET pesanan v2 setelah dibayar memuat paymentSummary PAID
+  GET http://host.docker.internal:8080/api/v2/orders/24f0a516-a648-4083-8e53-e901b942a10b [200 OK, 805B, 21ms]
+  ✓  Status 200
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Content-Type JSON
+  ✓  PAID dan PREPARING
+
+↳ GET antrean PREPARING v2 oleh KITCHEN
+  GET http://host.docker.internal:8080/api/v2/orders?status=PREPARING [200 OK, 807B, 20ms]
+  ✓  Status 200
+  ✓  Waktu respons di bawah 2000 ms
+  ✓  Content-Type JSON
+  ✓  Memuat pesanan yang dibayar dengan PAID
+
+┌─────────────────────────┬───────────────────┬───────────────────┐
+│                         │          executed │            failed │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              iterations │                 1 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│                requests │                37 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│            test-scripts │                37 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│      prerequest-scripts │                 0 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              assertions │               167 │                 0 │
+├─────────────────────────┴───────────────────┴───────────────────┤
+│ total run duration: 2.8s                                        │
+├─────────────────────────────────────────────────────────────────┤
+│ total data received: 9.81kB (approx)                            │
+├─────────────────────────────────────────────────────────────────┤
+│ average response time: 60ms [min: 6ms, max: 678ms, s.d.: 129ms] │
+└─────────────────────────────────────────────────────────────────┘
