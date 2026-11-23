@@ -535,7 +535,7 @@ curl -i -X DELETE http://localhost:8080/api/v2/orders/<orderId> \
 
 ## 11.7 Berkas Pengujian Pendukung
 
-Berkas berikut disertakan pada arsip kode sumber untuk memverifikasi implementasi di atas. Ringkasan hasil eksekusinya dimuat pada subbab 11.8, sedangkan pengujian API v2.0 yang lengkap dilaporkan pada tahap pengujian berikutnya.
+Berkas berikut disertakan pada arsip kode sumber untuk memverifikasi implementasi di atas. Ringkasan hasil eksekusinya dimuat pada subbab 11.8, sedangkan pengujian API v2.0 yang lengkap dilaporkan pada Bab 12.
 
 | Berkas | Cakupan |
 | :--- | :--- |
@@ -605,4 +605,4 @@ Hasil ini menunjukkan bahwa PUT dan PATCH v2 mengembalikan kontrak bersarang den
 
 - Respons **PUT** selalu memuat paymentSummary **UNPAID** karena hanya pesanan PENDING yang dapat diganti. Respons **PATCH** membentuk paymentSummary dari baris **mock_payment** pada saat permintaan, sehingga tidak ada status pembayaran tersimpan yang dapat tidak sinkron.
 
-- Bab ini memuat implementasi beserta ringkasan verifikasi awal pada subbab 11.8. Pengujian API v2.0 yang lengkap, termasuk bukti per skenario, dilaporkan pada tahap pengujian berikutnya.
+- Bab ini memuat implementasi beserta ringkasan verifikasi awal pada subbab 11.8. Pengujian API v2.0 yang lengkap, termasuk bukti per skenario, dilaporkan pada Bab 12.

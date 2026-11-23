@@ -602,7 +602,7 @@ curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v2/orders/<o
 
 ## 10.7 Berkas Pengujian Pendukung
 
-Berkas berikut disertakan pada arsip kode sumber untuk memverifikasi implementasi di atas. Eksekusi dan hasilnya dilaporkan pada tahap pengujian API v2.0.
+Berkas berikut disertakan pada arsip kode sumber untuk memverifikasi implementasi di atas. Eksekusi dan hasilnya dilaporkan pada Bab 12.
 
 | Berkas | Cakupan |
 | :--- | :--- |

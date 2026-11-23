@@ -1,6 +1,6 @@
 # BAB 6. PENGUJIAN API VERSI 1.0 (GET & POST)
 
-Bab ini memuat pengujian terhadap operasi GET dan POST pada API versi 1.0 (`/api/v1`) yang diimplementasikan pada Bab 4. Pengujian dilakukan dengan dua pendekatan yang saling melengkapi, yaitu uji unit pada lapisan service dan uji API terhadap sistem yang berjalan penuh melalui gateway. Pembahasan mencakup strategi, rancangan kasus uji, kode sumber pengujian, serta hasil eksekusi. Pengujian untuk PUT, PATCH, dan DELETE dilaporkan pada iterasi berikutnya.
+Bab ini memuat pengujian terhadap operasi GET dan POST pada API versi 1.0 (`/api/v1`) yang diimplementasikan pada Bab 4. Pengujian dilakukan dengan dua pendekatan yang saling melengkapi, yaitu uji unit pada lapisan service dan uji API terhadap sistem yang berjalan penuh melalui gateway. Pembahasan mencakup strategi, rancangan kasus uji, kode sumber pengujian, serta hasil eksekusi. Pengujian untuk PUT, PATCH, dan DELETE dilaporkan pada Bab 7.
 
 ---
 
@@ -1575,4 +1575,4 @@ Mockito is currently self-attaching to enable the inline-mock-maker. This will n
 * Uji unit memakai mock untuk repository, sehingga batasan basis data (*constraint* dan indeks) serta *optimistic locking* tidak diuji pada lapisan ini. Aspek tersebut tercakup sebagian oleh uji API dan skrip smoke test terhadap PostgreSQL asli.
 * Uji API berjalan sebagai satu alur berurutan pada satu pengguna. Pengujian beban, konkurensi, dan ketahanan ketika `catalog-service` tidak tersedia (503) belum dilakukan.
 * Data hasil uji API (outlet, meja, menu, dan pesanan uji) tetap tersimpan di basis data. Untuk kondisi bersih, sistem dijalankan ulang dengan menghapus volume basis data.
-* Pengujian PUT, PATCH, dan DELETE dilaporkan pada iterasi berikutnya. Request PATCH pada kelompok 04 hanya prasyarat alur pembayaran.
+* Pengujian PUT, PATCH, dan DELETE dilaporkan pada Bab 7. Request PATCH pada kelompok 04 hanya prasyarat alur pembayaran.

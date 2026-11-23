@@ -95,7 +95,7 @@ Ada tiga lapis pengujian. Semuanya dijalankan dari folder `Backend`.
 
 ### a. Uji unit (JUnit 5 + Mockito)
 
-Tidak membutuhkan sistem yang menyala. Mencakup seluruh skenario GET, POST, PUT, PATCH, DELETE, dan mesin status pesanan (total 103 uji unit). Jalankan di PowerShell:
+Tidak membutuhkan sistem yang menyala. Mencakup seluruh skenario GET, POST, PUT, PATCH, DELETE, dan mesin status pesanan (total 126 uji unit: 70 pada order-service dan 56 pada catalog-service). Jalankan di PowerShell:
 
 ```powershell
 cd order-service

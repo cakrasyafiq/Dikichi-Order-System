@@ -61,9 +61,10 @@ Uji unit memeriksa aturan dengan cepat dan terisolasi, sedangkan uji API membukt
 | OrderV2ControllerTest | 9 | POST 201 dengan header Location dan paymentSummary UNPAID, daftar pesanan dengan satu pencarian pembayaran, GET detail dengan dan tanpa pembayaran, pembayaran menghasilkan PREPARING dan PAID, PUT mendelegasikan request bersarang, PATCH CANCELLED (UNPAID) dan READY (PAID), serta pemeriksaan bahwa PUT dan PATCH dipetakan tetapi DELETE tidak |
 | V2OrderRequestValidationTest | 7 | Request valid, body datar gaya v1 ditolak, nama pelanggan kosong, nama lebih dari 50 karakter, format outlet dan meja salah, daftar item kosong, dan kuantitas tidak valid, dengan path galat bersarang |
 | OrderV2MapperTest | 4 | Request diratakan menjadi perintah bersama, ringkasan UNPAID dengan field pembayaran null, pembayaran CASH memuat uang diterima dan kembalian, serta pembayaran non-tunai |
+| PaymentServiceLookupTest | 3 | Pencarian pembayaran per pesanan dan per kumpulan pesanan dengan satu kueri untuk seluruh antrean, termasuk antrean kosong |
 | OrderServiceTest (bersama v1 dan v2) | 32 | Pembuatan, daftar, detail, penggantian (PUT), dan perubahan status (PATCH) pada lapisan service |
 | OrderStateMachineTest (bersama v1 dan v2) | 4 | Transisi status, kepemilikan status per role, dan status yang tidak pernah dapat di-PATCH |
-| PaymentServiceTest dan PaymentServiceLookupTest (bersama v1 dan v2) | 11 dan 3 | Pembayaran CASH, CARD, dan QRIS serta pencarian pembayaran per pesanan dan per daftar pesanan |
+| PaymentServiceTest (bersama v1 dan v2) | 11 | Pembayaran CASH, CARD, dan QRIS pada lapisan service |
 | Total | 70 |  |
 
 ### 12.2.2 Kasus Uji API
@@ -93,7 +94,7 @@ Singkatan GP merujuk pada koleksi **dikichi-v2-get-post** dan PPD pada koleksi *
 | Endpoint | Uji Unit | Request Uji API (nomor) |
 | :--- | :--- | :--- |
 | POST /api/v2/orders | OrderV2ControllerTest (1), V2OrderRequestValidationTest (7), OrderV2MapperTest (1) | GP 4 sampai 16 (PPD 4 dan 44 sebagai prasyarat) |
-| GET /api/v2/orders | OrderV2ControllerTest (1), OrderV2MapperTest (3) | GP 17 sampai 22 dan 37 |
+| GET /api/v2/orders | OrderV2ControllerTest (1), OrderV2MapperTest (3), PaymentServiceLookupTest (3) | GP 17 sampai 22 dan 37 |
 | GET /api/v2/orders/{orderId} | OrderV2ControllerTest (2) | GP 23 sampai 25 dan 36, PPD 21, 47, 55 |
 | POST /api/v2/orders/{orderId}/pay | OrderV2ControllerTest (1), PaymentServiceTest (11), PaymentServiceLookupTest (3) | GP 28 sampai 35 (PPD 38 sebagai prasyarat) |
 | PUT /api/v2/orders/{orderId} | OrderV2ControllerTest (1), OrderServiceTest (bagian PUT) | PPD 5 sampai 20 dan 37 |
@@ -105,7 +106,7 @@ Singkatan GP merujuk pada koleksi **dikichi-v2-get-post** dan PPD pada koleksi *
 
 ### 12.3.1 Uji Unit order-service
 
-Tiga kelas uji berikut khusus untuk kontrak v2. Kelas **OrderServiceTest**, **OrderStateMachineTest**, **PaymentServiceTest**, dan **PaymentServiceLookupTest** dipakai bersama oleh v1 dan v2 dan kodenya telah dimuat pada Bab 6 dan Bab 7.
+Empat kelas uji berikut khusus untuk kontrak v2 dan pendukungnya. Kelas **OrderServiceTest**, **OrderStateMachineTest**, dan **PaymentServiceTest** dipakai bersama oleh v1 dan v2 dan kodenya telah dimuat pada Bab 6 dan Bab 7.
 
 **order-service: src/test/.../order/controller/OrderV2ControllerTest.java**
 
@@ -490,6 +491,64 @@ class OrderV2MapperTest {
         assertThat(response.paymentSummary().paymentMethod()).isEqualTo(PaymentMethod.QRIS);
         assertThat(response.paymentSummary().amountTendered()).isNull();
         assertThat(response.paymentSummary().change()).isNull();
+    }
+}
+```
+
+**order-service: src/test/.../order/service/PaymentServiceLookupTest.java**
+
+```java
+package com.ambatucode.dikichi.order.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import com.ambatucode.dikichi.order.config.CallerContext;
+import com.ambatucode.dikichi.order.entity.MockPayment;
+import com.ambatucode.dikichi.order.entity.PaymentMethod;
+import com.ambatucode.dikichi.order.repository.MockPaymentRepository;
+import com.ambatucode.dikichi.order.repository.OrderRepository;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+
+class PaymentServiceLookupTest {
+
+    private final MockPaymentRepository payments = mock(MockPaymentRepository.class);
+    private final PaymentService service =
+            new PaymentService(mock(OrderRepository.class), payments, new CallerContext());
+
+    @Test
+    void findByOrderIdDelegatesToTheRepository() {
+        UUID orderId = UUID.randomUUID();
+        MockPayment payment = new MockPayment(orderId, PaymentMethod.CARD, null, null, 50000L);
+        when(payments.findByOrderId(orderId)).thenReturn(Optional.of(payment));
+
+        assertThat(service.findByOrderId(orderId)).containsSame(payment);
+    }
+
+    @Test
+    void findByOrderIdsIndexesPaymentsByOrderId() {
+        UUID first = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+        MockPayment payment = new MockPayment(first, PaymentMethod.QRIS, null, null, 50000L);
+        when(payments.findByOrderIdIn(List.of(first, second))).thenReturn(List.of(payment));
+
+        Map<UUID, MockPayment> result = service.findByOrderIds(List.of(first, second));
+
+        assertThat(result).containsOnlyKeys(first).containsEntry(first, payment);
+        verify(payments).findByOrderIdIn(List.of(first, second));
+    }
+
+    @Test
+    void findByOrderIdsSkipsTheQueryForAnEmptyQueue() {
+        assertThat(service.findByOrderIds(List.of())).isEmpty();
+        verifyNoInteractions(payments);
     }
 }
 ```

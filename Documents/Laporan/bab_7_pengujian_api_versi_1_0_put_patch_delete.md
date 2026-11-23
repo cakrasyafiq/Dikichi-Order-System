@@ -984,7 +984,7 @@ Skrip `run-newman.ps1` menerima parameter `-Collection` sehingga dapat menjalank
 | `catalog-service: TableServiceTest` | 11 | 0 | 0 | 0 | 0,063 |
 | **Total catalog-service** | **56** | **0** | **0** | **0** | **11,996 (BUILD SUCCESS)** |
 
-Seluruh 103 uji unit (47 uji mutasi PUT, PATCH, DELETE beserta mesin status dan 56 uji GET तथा POST dari iterasi sebelumnya) lulus tanpa kegagalan maupun error.
+Seluruh 103 uji unit (47 uji pada order-service dan 56 uji pada catalog-service, mencakup operasi GET, POST, PUT, PATCH, dan DELETE) lulus tanpa kegagalan maupun error.
 
 ### 7.5.2 Hasil Uji API (Newman)
 
