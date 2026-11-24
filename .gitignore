@@ -4,3 +4,9 @@
 .DS_Store
 Thumbs.db
 
+
+# Frontend
+Frontend/node_modules/
+Frontend/dist/
+Frontend/coverage/
+*.tsbuildinfo

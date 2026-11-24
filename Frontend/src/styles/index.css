@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --container-max-width: 1200px;
+    --page-padding-x: 32px;
+    --section-gap: 24px;
+
+    --color-canvas: #fdf4ff;
+    --color-surface: #ffffff;
+    --color-brand-accent: #3b0764;
+    --color-magenta-mid: #e91e8c;
+    --color-inverse-text: #ffffff73;
+    --color-border: #6b21a81f;
+    --color-border-strong: #e91e8c1a;
+    --color-violet-near-black: #3b07649e;
+    --color-magenta-hover: #c91678;
+    --color-lime: #e2f516;
+
+    --shadow-card: 0 4px 16px rgba(59, 7, 100, 0.05);
+    --shadow-mode-active: 0 10px 24px rgba(233, 30, 140, 0.34);
+  }
+
+  @media (max-width: 768px) {
+    :root {
+      --page-padding-x: 16px;
+    }
+  }
+
+  body {
+    @apply bg-canvas font-sans text-brand antialiased;
+    line-height: 1.45;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-magenta-mid);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
