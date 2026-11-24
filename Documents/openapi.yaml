@@ -1074,7 +1074,7 @@ components:
 
     MenuItem:
       type: object
-      required: [id, outletId, name, description, price, category, available]
+      required: [id, outletId, name, description, price, category, imageUrl, available]
       properties:
         id:
           type: string
@@ -1090,6 +1090,9 @@ components:
           description: Integer IDR.
         category:
           type: string
+        imageUrl:
+          type: [string, 'null']
+          description: URL path or address of the menu item image.
         available:
           type: boolean
     MenuItemCreateRequest:
@@ -1112,6 +1115,9 @@ components:
           type: string
           minLength: 1
           maxLength: 50
+        imageUrl:
+          type: [string, 'null']
+          maxLength: 500
         available:
           type: boolean
     MenuItemReplaceRequest:
@@ -1134,6 +1140,9 @@ components:
           type: string
           minLength: 1
           maxLength: 50
+        imageUrl:
+          type: [string, 'null']
+          maxLength: 500
         available:
           type: boolean
     AvailabilityPatchRequest:
