@@ -59,7 +59,7 @@ docker compose --env-file ../.env ps
 
 - Build pertama sekitar 3 sampai 8 menit karena mengunduh citra dan dependensi.
 - Tunggu sampai kelima kontainer (`catalog-db`, `order-db`, `catalog-service`, `order-service`, `gateway-service`) berstatus `healthy`.
-- Jangan menjalankan `docker compose up` tanpa nama layanan. Layanan `frontend` membutuhkan folder `../Frontend` yang belum ada di repositori ini.
+- Perintah di atas hanya menjalankan backend. Untuk menjalankan backend bersama website frontend, lihat `Frontend/README.md`.
 
 ## 3. Jalankan skrip uji
 
