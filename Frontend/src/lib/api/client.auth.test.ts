@@ -22,7 +22,7 @@ function signIn() {
   setSession({
     token: 'jwt-token',
     expiresAt: Date.now() + 3_600_000,
-    user: { username: 'cashier', role: 'CASHIER', outletId: 'OUT-01' },
+    user: { outletId: 'OUT-01' },
   });
 }
 

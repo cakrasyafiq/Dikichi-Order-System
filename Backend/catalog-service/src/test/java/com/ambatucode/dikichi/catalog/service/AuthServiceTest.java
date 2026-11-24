@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 import com.ambatucode.dikichi.catalog.config.JwtProperties;
 import com.ambatucode.dikichi.catalog.dto.LoginRequest;
 import com.ambatucode.dikichi.catalog.dto.LoginResponse;
-import com.ambatucode.dikichi.catalog.entity.Role;
 import com.ambatucode.dikichi.catalog.entity.StaffUser;
 import com.ambatucode.dikichi.catalog.exception.ApiException;
 import com.ambatucode.dikichi.catalog.repository.StaffUserRepository;
@@ -33,60 +32,44 @@ class AuthServiceTest {
         when(jwtService.issue(any(StaffUser.class))).thenReturn("token-abc");
     }
 
-    private StaffUser staff(String username, String rawPassword, Role role, String outletId) {
-        StaffUser user = mock(StaffUser.class);
-        when(user.getUsername()).thenReturn(username);
-        when(user.getPasswordHash()).thenReturn(encoder.encode(rawPassword));
-        when(user.getRole()).thenReturn(role);
-        when(user.getOutletId()).thenReturn(outletId);
-        when(staffUsers.findByUsername(username)).thenReturn(Optional.of(user));
+    private StaffUser outletAccount(String outletId, String rawPassword) {
+        StaffUser user = new StaffUser(outletId, encoder.encode(rawPassword));
+        when(staffUsers.findByOutletId(outletId)).thenReturn(Optional.of(user));
         return user;
     }
 
     @Test
-    void validCredentialsReturnTokenAndIdentity() {
-        staff("cashier", "secret-pass", Role.CASHIER, "OUT-01");
+    void validCredentialsReturnTokenAndOutletIdentity() {
+        outletAccount("OUT-01", "secret-pass");
 
-        LoginResponse response = service.login(new LoginRequest("cashier", "secret-pass"));
+        LoginResponse response = service.login(new LoginRequest("OUT-01", "secret-pass"));
 
         assertThat(response.accessToken()).isEqualTo("token-abc");
         assertThat(response.tokenType()).isEqualTo("Bearer");
         assertThat(response.expiresIn()).isEqualTo(28800L);
-        assertThat(response.user().username()).isEqualTo("cashier");
-        assertThat(response.user().role()).isEqualTo(Role.CASHIER);
         assertThat(response.user().outletId()).isEqualTo("OUT-01");
     }
 
     @Test
-    void masterHasNoOutlet() {
-        staff("master", "secret-pass", Role.MASTER, null);
-
-        LoginResponse response = service.login(new LoginRequest("master", "secret-pass"));
-
-        assertThat(response.user().role()).isEqualTo(Role.MASTER);
-        assertThat(response.user().outletId()).isNull();
-    }
-
-    @Test
     void wrongPasswordIsRejectedWithGenericMessage() {
-        staff("cashier", "secret-pass", Role.CASHIER, "OUT-01");
+        outletAccount("OUT-01", "secret-pass");
 
-        ApiException error = assertApiError(() -> service.login(new LoginRequest("cashier", "wrong-pass")));
+        ApiException error = assertApiError(() -> service.login(new LoginRequest("OUT-01", "wrong-pass")));
 
         assertThat(error.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(error.getCode()).isEqualTo("UNAUTHORIZED");
-        assertThat(error.getMessage()).isEqualTo("Invalid username or password");
+        assertThat(error.getMessage()).isEqualTo("Invalid outlet ID or password");
     }
 
     @Test
-    void unknownUserGetsTheSameMessageAsWrongPassword() {
-        when(staffUsers.findByUsername("ghost")).thenReturn(Optional.empty());
-        staff("cashier", "secret-pass", Role.CASHIER, "OUT-01");
+    void unknownOutletGetsTheSameMessageAsWrongPassword() {
+        when(staffUsers.findByOutletId("OUT-99")).thenReturn(Optional.empty());
+        outletAccount("OUT-01", "secret-pass");
 
-        ApiException unknownUser = assertApiError(() -> service.login(new LoginRequest("ghost", "any-pass")));
-        ApiException wrongPassword = assertApiError(() -> service.login(new LoginRequest("cashier", "wrong-pass")));
+        ApiException unknownOutlet = assertApiError(() -> service.login(new LoginRequest("OUT-99", "any-pass")));
+        ApiException wrongPassword = assertApiError(() -> service.login(new LoginRequest("OUT-01", "wrong-pass")));
 
-        assertThat(unknownUser.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(unknownUser.getMessage()).isEqualTo(wrongPassword.getMessage());
+        assertThat(unknownOutlet.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(unknownOutlet.getMessage()).isEqualTo(wrongPassword.getMessage());
     }
 }

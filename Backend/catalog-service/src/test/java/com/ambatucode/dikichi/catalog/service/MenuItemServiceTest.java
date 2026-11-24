@@ -15,7 +15,6 @@ import com.ambatucode.dikichi.catalog.dto.MenuItemReplaceRequest;
 import com.ambatucode.dikichi.catalog.dto.MenuItemResponse;
 import com.ambatucode.dikichi.catalog.entity.MenuItem;
 import com.ambatucode.dikichi.catalog.entity.Outlet;
-import com.ambatucode.dikichi.catalog.entity.Role;
 import com.ambatucode.dikichi.catalog.exception.ApiException;
 import com.ambatucode.dikichi.catalog.repository.MenuItemRepository;
 import com.ambatucode.dikichi.catalog.repository.OutletRepository;
@@ -42,7 +41,7 @@ class MenuItemServiceTest {
 
     @Test
     void newMenuItemIsAvailableByDefault() {
-        caller.populate(Role.MASTER, null);
+        caller.populate("OUT-01");
 
         MenuItemResponse response = service.create("OUT-01",
                 new MenuItemCreateRequest(" Mie Suit ", "Mie ayam", 25000, " Mie ", null));
@@ -56,7 +55,7 @@ class MenuItemServiceTest {
 
     @Test
     void explicitAvailabilityIsKept() {
-        caller.populate(Role.MASTER, null);
+        caller.populate("OUT-01");
 
         MenuItemResponse response = service.create("OUT-01",
                 new MenuItemCreateRequest("Lumpia", null, 19000, "Dimsum", false));
@@ -68,7 +67,7 @@ class MenuItemServiceTest {
 
     @Test
     void createTrimsAndPersistsImageUrlAndNormalizesBlankToNull() {
-        caller.populate(Role.MASTER, null);
+        caller.populate("OUT-01");
 
         MenuItemResponse withImage = service.create("OUT-01",
                 new MenuItemCreateRequest("Crispy Chicken", "Original", 10000, "makanan",
@@ -81,8 +80,8 @@ class MenuItemServiceTest {
     }
 
     @Test
-    void nonMasterCannotCreateMenuItem() {
-        caller.populate(Role.CASHIER, "OUT-01");
+    void anotherOutletCannotCreateMenuItem() {
+        caller.populate("OUT-02");
 
         ApiException error = assertApiError(() -> service.create("OUT-01",
                 new MenuItemCreateRequest("Mie", null, 25000, "Mie", true)));
@@ -93,7 +92,7 @@ class MenuItemServiceTest {
 
     @Test
     void creatingMenuItemInUnknownOutletReturnsNotFound() {
-        caller.populate(Role.MASTER, null);
+        caller.populate("OUT-404");
 
         ApiException error = assertApiError(() -> service.create("OUT-404",
                 new MenuItemCreateRequest("Mie", null, 25000, "Mie", true)));
@@ -144,8 +143,8 @@ class MenuItemServiceTest {
     }
 
     @Test
-    void masterReplacesMenuItemWithTrimmedFields() {
-        caller.populate(Role.MASTER, null);
+    void outletAdminReplacesOwnMenuItemWithTrimmedFields() {
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         MenuItem existing = new MenuItem("OUT-01", "Lama", null, 15000, "Lama", true);
         when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
@@ -164,7 +163,7 @@ class MenuItemServiceTest {
 
     @Test
     void replacingUnknownMenuItemReturnsNotFound() {
-        caller.populate(Role.MASTER, null);
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.empty());
 
@@ -176,9 +175,11 @@ class MenuItemServiceTest {
     }
 
     @Test
-    void nonMasterCannotReplaceMenuItem() {
-        caller.populate(Role.CASHIER, "OUT-01");
+    void anotherOutletCannotReplaceMenuItem() {
+        caller.populate("OUT-02");
         UUID id = UUID.randomUUID();
+        MenuItem existing = new MenuItem("OUT-01", "Lama", null, 15000, "Lama", true);
+        when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
 
         ApiException error = assertApiError(() -> service.replace(id,
                 new MenuItemReplaceRequest("Mie", null, 25000, "Mie", true)));
@@ -188,20 +189,8 @@ class MenuItemServiceTest {
     }
 
     @Test
-    void masterCanChangeAvailabilityAcrossOutlets() {
-        caller.populate(Role.MASTER, null);
-        UUID id = UUID.randomUUID();
-        MenuItem existing = new MenuItem("OUT-02", "Mie Suit", null, 25000, "Mie", true);
-        when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
-
-        MenuItemResponse response = service.changeAvailability(id, new AvailabilityPatchRequest(false));
-
-        assertThat(response.available()).isFalse();
-    }
-
-    @Test
-    void cashierCanChangeAvailabilityInOwnOutlet() {
-        caller.populate(Role.CASHIER, "OUT-01");
+    void outletAdminCanChangeAvailabilityInOwnOutlet() {
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         MenuItem existing = new MenuItem("OUT-01", "Mie Suit", null, 25000, "Mie", true);
         when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
@@ -212,20 +201,8 @@ class MenuItemServiceTest {
     }
 
     @Test
-    void kitchenCanChangeAvailabilityInOwnOutlet() {
-        caller.populate(Role.KITCHEN, "OUT-01");
-        UUID id = UUID.randomUUID();
-        MenuItem existing = new MenuItem("OUT-01", "Mie Suit", null, 25000, "Mie", false);
-        when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
-
-        MenuItemResponse response = service.changeAvailability(id, new AvailabilityPatchRequest(true));
-
-        assertThat(response.available()).isTrue();
-    }
-
-    @Test
-    void cashierCannotChangeAvailabilityOfAnotherOutlet() {
-        caller.populate(Role.CASHIER, "OUT-01");
+    void anotherOutletCannotChangeAvailability() {
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         MenuItem existing = new MenuItem("OUT-02", "Mie Suit", null, 25000, "Mie", true);
         when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
@@ -235,19 +212,6 @@ class MenuItemServiceTest {
         assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(error.getCode()).isEqualTo("FORBIDDEN");
         assertThat(existing.isAvailable()).isTrue();
-    }
-
-    @Test
-    void kitchenCannotChangeAvailabilityOfAnotherOutlet() {
-        caller.populate(Role.KITCHEN, "OUT-01");
-        UUID id = UUID.randomUUID();
-        MenuItem existing = new MenuItem("OUT-02", "Mie Suit", null, 25000, "Mie", true);
-        when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
-
-        ApiException error = assertApiError(() -> service.changeAvailability(id, new AvailabilityPatchRequest(false)));
-
-        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
-        assertThat(error.getCode()).isEqualTo("FORBIDDEN");
     }
 
     @Test
@@ -261,7 +225,7 @@ class MenuItemServiceTest {
 
     @Test
     void changingAvailabilityOfUnknownMenuItemReturnsNotFound() {
-        caller.populate(Role.MASTER, null);
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.empty());
 
@@ -272,8 +236,8 @@ class MenuItemServiceTest {
     }
 
     @Test
-    void masterDeletesMenuItemWithSoftDelete() {
-        caller.populate(Role.MASTER, null);
+    void outletAdminDeletesOwnMenuItemWithSoftDelete() {
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         MenuItem existing = new MenuItem("OUT-01", "Mie Suit", null, 25000, "Mie", true);
         when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
@@ -285,7 +249,7 @@ class MenuItemServiceTest {
 
     @Test
     void deletingUnknownMenuItemReturnsNotFound() {
-        caller.populate(Role.MASTER, null);
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.empty());
 
@@ -296,9 +260,11 @@ class MenuItemServiceTest {
     }
 
     @Test
-    void nonMasterCannotDeleteMenuItem() {
-        caller.populate(Role.CASHIER, "OUT-01");
+    void anotherOutletCannotDeleteMenuItem() {
+        caller.populate("OUT-02");
         UUID id = UUID.randomUUID();
+        MenuItem existing = new MenuItem("OUT-01", "Mie Suit", null, 25000, "Mie", true);
+        when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
 
         ApiException error = assertApiError(() -> service.delete(id));
 

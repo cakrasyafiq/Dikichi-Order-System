@@ -2,13 +2,13 @@ import { Link, Navigate } from 'react-router-dom';
 import { HeroRow } from '@/components/layout/HeroRow';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ROUTES } from '@/constants/routes';
-import { LOGIN_COPY, ROLE_HOME } from '@/constants/staff';
+import { ADMIN_HOME, LOGIN_COPY } from '@/constants/staff';
 import { LoginForm } from '@/features/auth/LoginForm';
 import { useSession } from '@/features/auth/useSession';
 
 export function LoginPage() {
   const session = useSession();
-  if (session) return <Navigate to={ROLE_HOME[session.user.role]} replace />;
+  if (session) return <Navigate to={ADMIN_HOME} replace />;
 
   return (
     <PageLayout

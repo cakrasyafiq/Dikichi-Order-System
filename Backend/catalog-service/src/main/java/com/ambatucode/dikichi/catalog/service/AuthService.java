@@ -34,15 +34,15 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
-        Optional<StaffUser> user = staffUsers.findByUsername(request.username());
-        // WHY: hash a dummy value when the user is unknown so response time does not reveal valid usernames
+        Optional<StaffUser> user = staffUsers.findByOutletId(request.outletId());
+        // WHY: hash a dummy value when the outlet account is unknown so response time does not reveal valid outlet IDs
         String hash = user.map(StaffUser::getPasswordHash).orElse(dummyHash);
         boolean passwordMatches = passwordEncoder.matches(request.password(), hash);
         if (user.isEmpty() || !passwordMatches) {
-            throw ApiException.unauthorized("Invalid username or password");
+            throw ApiException.unauthorized("Invalid outlet ID or password");
         }
         StaffUser staff = user.get();
-        StaffIdentity identity = new StaffIdentity(staff.getUsername(), staff.getRole(), staff.getOutletId());
+        StaffIdentity identity = new StaffIdentity(staff.getOutletId());
         return new LoginResponse(jwtService.issue(staff), TOKEN_TYPE, jwtProperties.expiresInSeconds(), identity);
     }
 }

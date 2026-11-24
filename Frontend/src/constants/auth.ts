@@ -1,10 +1,7 @@
 export const SESSION_STORAGE_KEY = 'dikichi.session';
 
-export const STAFF_ROLES = ['MASTER', 'CASHIER', 'KITCHEN'] as const;
-export type StaffRole = (typeof STAFF_ROLES)[number];
-
 export const LOGIN_LIMITS = {
-  usernameMaxLength: 50,
+  outletIdMaxLength: 20,
   passwordMaxLength: 100,
 } as const;
 

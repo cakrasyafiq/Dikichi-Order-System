@@ -8,7 +8,6 @@ import com.ambatucode.dikichi.order.dto.common.OrderStatusPatchRequest;
 import com.ambatucode.dikichi.order.entity.Order;
 import com.ambatucode.dikichi.order.entity.OrderItem;
 import com.ambatucode.dikichi.order.entity.OrderStatus;
-import com.ambatucode.dikichi.order.entity.Role;
 import com.ambatucode.dikichi.order.exception.ApiException;
 import com.ambatucode.dikichi.order.repository.OrderRepository;
 import java.util.ArrayList;
@@ -51,24 +50,17 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public List<Order> list(String outletIdParam, OrderStatus statusParam) {
-        caller.requireRole(Role.CASHIER, Role.KITCHEN);
+        caller.requireAuthenticated();
         String outletId = outletIdParam == null ? caller.outletId() : outletIdParam;
         caller.requireSameOutlet(outletId);
 
-        Set<OrderStatus> allowed = OrderStateMachine.queueFor(caller.role());
-        Set<OrderStatus> statuses = allowed;
-        if (statusParam != null) {
-            if (!allowed.contains(statusParam)) {
-                throw ApiException.forbidden("Role cannot list orders with this status");
-            }
-            statuses = Set.of(statusParam);
-        }
+        Set<OrderStatus> statuses = statusParam == null ? OrderStateMachine.allStatuses() : Set.of(statusParam);
         return orders.findByOutletIdAndStatusInOrderByCreatedAtAsc(outletId, statuses);
     }
 
     @Transactional(readOnly = true)
     public Order get(UUID orderId) {
-        caller.requireRole(Role.CASHIER, Role.KITCHEN);
+        caller.requireAuthenticated();
         Order order = orders.findWithItemsById(orderId)
                 .orElseThrow(() -> ApiException.notFound("Order not found"));
         caller.requireSameOutlet(order.getOutletId());
@@ -76,7 +68,7 @@ public class OrderService {
     }
 
     public Order replace(UUID orderId, CreateOrderCommand command) {
-        caller.requireRole(Role.CASHIER);
+        caller.requireAuthenticated();
         Order current = orders.findWithItemsById(orderId)
                 .orElseThrow(() -> ApiException.notFound("Order not found"));
         requireOwnEditableOrder(current, command.outletId());
@@ -88,16 +80,13 @@ public class OrderService {
 
     @Transactional
     public Order updateStatus(UUID orderId, OrderStatusPatchRequest request) {
-        caller.requireRole(Role.CASHIER, Role.KITCHEN);
+        caller.requireAuthenticated();
         OrderStatus target = parseTargetStatus(request);
         Order order = orders.findWithItemsById(orderId)
                 .orElseThrow(() -> ApiException.notFound("Order not found"));
         caller.requireSameOutlet(order.getOutletId());
         if (OrderStateMachine.isNeverPatchable(target)) {
             throw ApiException.conflict("INVALID_STATUS_TRANSITION", "Status cannot be set through this endpoint");
-        }
-        if (!OrderStateMachine.roleOwns(caller.role(), target)) {
-            throw ApiException.forbidden("Role is not allowed to set this status");
         }
         if (!OrderStateMachine.allows(order.getStatus(), target)) {
             throw ApiException.conflict("INVALID_STATUS_TRANSITION",

@@ -6,7 +6,6 @@ import com.ambatucode.dikichi.catalog.dto.OutletCreateRequest;
 import com.ambatucode.dikichi.catalog.dto.OutletReplaceRequest;
 import com.ambatucode.dikichi.catalog.dto.OutletResponse;
 import com.ambatucode.dikichi.catalog.entity.Outlet;
-import com.ambatucode.dikichi.catalog.entity.Role;
 import com.ambatucode.dikichi.catalog.exception.ApiException;
 import com.ambatucode.dikichi.catalog.mapper.CatalogMapper;
 import com.ambatucode.dikichi.catalog.repository.OutletRepository;
@@ -37,7 +36,7 @@ public class OutletService {
 
     @Transactional
     public OutletResponse create(OutletCreateRequest request) {
-        caller.requireRole(Role.MASTER);
+        caller.requireSameOutlet(request.id());
         // WHY: existsById also sees soft-deleted rows because the outlet id is the primary key
         if (outlets.existsById(request.id())) {
             throw ApiException.conflict("DUPLICATE_OUTLET_ID", "Outlet id already exists",
@@ -49,7 +48,7 @@ public class OutletService {
 
     @Transactional
     public OutletResponse replace(String outletId, OutletReplaceRequest request) {
-        caller.requireRole(Role.MASTER);
+        caller.requireSameOutlet(outletId);
         Outlet outlet = requireActive(outletId);
         outlet.replace(request.name().strip(), request.address().strip());
         return CatalogMapper.toResponse(outlet);
@@ -57,7 +56,7 @@ public class OutletService {
 
     @Transactional
     public void delete(String outletId) {
-        caller.requireRole(Role.MASTER);
+        caller.requireSameOutlet(outletId);
         requireActive(outletId).markDeleted();
     }
 

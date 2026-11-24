@@ -13,7 +13,6 @@ import com.ambatucode.dikichi.catalog.dto.TableCreateRequest;
 import com.ambatucode.dikichi.catalog.dto.TableResponse;
 import com.ambatucode.dikichi.catalog.entity.DiningTable;
 import com.ambatucode.dikichi.catalog.entity.Outlet;
-import com.ambatucode.dikichi.catalog.entity.Role;
 import com.ambatucode.dikichi.catalog.exception.ApiException;
 import com.ambatucode.dikichi.catalog.repository.DiningTableRepository;
 import com.ambatucode.dikichi.catalog.repository.OutletRepository;
@@ -55,8 +54,8 @@ class TableServiceTest {
     }
 
     @Test
-    void masterCreatesTable() {
-        caller.populate(Role.MASTER, null);
+    void outletAdminCreatesTableInOwnOutlet() {
+        caller.populate("OUT-01");
         when(tables.existsByOutletIdAndCodeAndDeletedFalse("OUT-01", "T-21")).thenReturn(false);
 
         TableResponse response = service.create("OUT-01", new TableCreateRequest("T-21"));
@@ -67,7 +66,7 @@ class TableServiceTest {
 
     @Test
     void duplicateTableCodeIsRejected() {
-        caller.populate(Role.MASTER, null);
+        caller.populate("OUT-01");
         when(tables.existsByOutletIdAndCodeAndDeletedFalse("OUT-01", "T-01")).thenReturn(true);
 
         ApiException error = assertApiError(() -> service.create("OUT-01", new TableCreateRequest("T-01")));
@@ -79,7 +78,7 @@ class TableServiceTest {
 
     @Test
     void creatingTableInUnknownOutletReturnsNotFound() {
-        caller.populate(Role.MASTER, null);
+        caller.populate("OUT-404");
 
         ApiException error = assertApiError(() -> service.create("OUT-404", new TableCreateRequest("T-01")));
 
@@ -87,8 +86,8 @@ class TableServiceTest {
     }
 
     @Test
-    void nonMasterCannotCreateTable() {
-        caller.populate(Role.KITCHEN, "OUT-01");
+    void anotherOutletCannotCreateTable() {
+        caller.populate("OUT-02");
 
         ApiException error = assertApiError(() -> service.create("OUT-01", new TableCreateRequest("T-21")));
 
@@ -96,8 +95,8 @@ class TableServiceTest {
     }
 
     @Test
-    void masterDeletesTableWithSoftDelete() {
-        caller.populate(Role.MASTER, null);
+    void outletAdminDeletesTableWithSoftDelete() {
+        caller.populate("OUT-01");
         DiningTable table = new DiningTable("OUT-01", "T-21");
         when(tables.findByOutletIdAndCodeAndDeletedFalse("OUT-01", "T-21")).thenReturn(Optional.of(table));
 
@@ -108,7 +107,7 @@ class TableServiceTest {
 
     @Test
     void deletingUnknownTableReturnsNotFound() {
-        caller.populate(Role.MASTER, null);
+        caller.populate("OUT-01");
         when(tables.findByOutletIdAndCodeAndDeletedFalse("OUT-01", "T-99")).thenReturn(Optional.empty());
 
         ApiException error = assertApiError(() -> service.delete("OUT-01", "T-99"));
@@ -119,7 +118,7 @@ class TableServiceTest {
 
     @Test
     void deletingTableInUnknownOutletReturnsNotFound() {
-        caller.populate(Role.MASTER, null);
+        caller.populate("OUT-404");
 
         ApiException error = assertApiError(() -> service.delete("OUT-404", "T-01"));
 
@@ -128,8 +127,8 @@ class TableServiceTest {
     }
 
     @Test
-    void nonMasterCannotDeleteTable() {
-        caller.populate(Role.CASHIER, "OUT-01");
+    void anotherOutletCannotDeleteTable() {
+        caller.populate("OUT-02");
 
         ApiException error = assertApiError(() -> service.delete("OUT-01", "T-01"));
 

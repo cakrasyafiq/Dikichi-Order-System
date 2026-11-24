@@ -1,10 +1,11 @@
 package com.ambatucode.dikichi.order.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.ambatucode.dikichi.order.entity.OrderStatus;
-import com.ambatucode.dikichi.order.entity.Role;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 class OrderStateMachineTest {
@@ -32,14 +33,8 @@ class OrderStateMachineTest {
     }
 
     @Test
-    void eachRoleOwnsOnlyItsTargets() {
-        assertTrue(OrderStateMachine.roleOwns(Role.CASHIER, OrderStatus.ACCEPTED));
-        assertTrue(OrderStateMachine.roleOwns(Role.CASHIER, OrderStatus.CANCELLED));
-        assertFalse(OrderStateMachine.roleOwns(Role.CASHIER, OrderStatus.READY));
-        assertTrue(OrderStateMachine.roleOwns(Role.KITCHEN, OrderStatus.READY));
-        assertTrue(OrderStateMachine.roleOwns(Role.KITCHEN, OrderStatus.COMPLETED));
-        assertFalse(OrderStateMachine.roleOwns(Role.KITCHEN, OrderStatus.CANCELLED));
-        assertFalse(OrderStateMachine.roleOwns(Role.MASTER, OrderStatus.ACCEPTED));
+    void allStatusesIncludesEveryOrderLifecycleStateForOutletAdmin() {
+        assertEquals(Set.of(OrderStatus.values()), OrderStateMachine.allStatuses());
     }
 
     @Test

@@ -15,7 +15,6 @@ import com.ambatucode.dikichi.order.entity.Order;
 import com.ambatucode.dikichi.order.entity.OrderItem;
 import com.ambatucode.dikichi.order.entity.OrderStatus;
 import com.ambatucode.dikichi.order.entity.PaymentMethod;
-import com.ambatucode.dikichi.order.entity.Role;
 import com.ambatucode.dikichi.order.exception.ApiException;
 import com.ambatucode.dikichi.order.repository.MockPaymentRepository;
 import com.ambatucode.dikichi.order.repository.OrderRepository;
@@ -36,7 +35,7 @@ class PaymentServiceTest {
 
     @BeforeEach
     void setUp() {
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
         when(orders.saveAndFlush(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -139,9 +138,9 @@ class PaymentServiceTest {
     }
 
     @Test
-    void onlyCashierMayPay() {
+    void anonymousCallerMayNotPay() {
         storedOrder(OrderStatus.ACCEPTED);
-        caller.populate(Role.KITCHEN, "OUT-01");
+        caller.populate(null);
 
         ApiException error = assertApiError(() -> service.pay(orderId, new PaymentRequest(PaymentMethod.CASH, 60000L)));
 
@@ -149,9 +148,9 @@ class PaymentServiceTest {
     }
 
     @Test
-    void cashierOfAnotherOutletCannotPay() {
+    void adminOfAnotherOutletCannotPay() {
         storedOrder(OrderStatus.ACCEPTED);
-        caller.populate(Role.CASHIER, "OUT-02");
+        caller.populate("OUT-02");
 
         ApiException error = assertApiError(() -> service.pay(orderId, new PaymentRequest(PaymentMethod.CASH, 60000L)));
 

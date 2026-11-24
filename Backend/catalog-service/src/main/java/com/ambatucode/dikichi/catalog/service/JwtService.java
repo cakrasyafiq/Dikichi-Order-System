@@ -23,15 +23,13 @@ public class JwtService {
 
     public String issue(StaffUser user) {
         Instant now = Instant.now();
-        JwtClaimsSet.Builder claims = JwtClaimsSet.builder()
-                .subject(user.getUsername())
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .subject(user.getOutletId())
                 .issuedAt(now)
                 .expiresAt(now.plusSeconds(properties.expiresInSeconds()))
-                .claim("role", user.getRole().name());
-        if (user.getOutletId() != null) {
-            claims.claim("outletId", user.getOutletId());
-        }
+                .claim("outletId", user.getOutletId())
+                .build();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
-        return jwtEncoder.encode(JwtEncoderParameters.from(header, claims.build())).getTokenValue();
+        return jwtEncoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
     }
 }

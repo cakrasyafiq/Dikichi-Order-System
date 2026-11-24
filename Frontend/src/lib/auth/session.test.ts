@@ -8,7 +8,7 @@ function makeSession(overrides: Partial<Session> = {}): Session {
   return {
     token: 'jwt-token',
     expiresAt: Date.now() + ONE_HOUR_MS,
-    user: { username: 'cashier', role: 'CASHIER', outletId: 'OUT-01' },
+    user: { outletId: 'OUT-01' },
     ...overrides,
   };
 }
@@ -37,11 +37,11 @@ describe('session store', () => {
     expect(getSession()).toBeNull();
   });
 
-  it('ignores stored data that is not valid JSON or has an unknown role', () => {
+  it('ignores stored data that is not valid JSON or is missing outletId', () => {
     sessionStorage.setItem(SESSION_STORAGE_KEY, '{not json');
     expect(getSession()).toBeNull();
 
-    const forged = { ...makeSession(), user: { username: 'x', role: 'ADMIN', outletId: null } };
+    const forged = { ...makeSession(), user: { outletId: '' } };
     sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(forged));
     expect(getSession()).toBeNull();
   });

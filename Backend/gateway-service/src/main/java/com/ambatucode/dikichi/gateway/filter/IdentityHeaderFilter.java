@@ -47,10 +47,11 @@ public class IdentityHeaderFilter implements GlobalFilter, Ordered {
                     IDENTITY_HEADERS.forEach(headers::remove);
                     headers.set(REQUEST_ID, UUID.randomUUID().toString());
                     if (jwt != null) {
-                        headers.set(USER_NAME, jwt.getSubject());
-                        headers.set(USER_ROLE, jwt.getClaimAsString("role"));
                         String outletId = jwt.getClaimAsString("outletId");
-                        if (outletId != null) {
+                        if (outletId == null || outletId.isBlank()) {
+                            outletId = jwt.getSubject();
+                        }
+                        if (outletId != null && !outletId.isBlank()) {
                             headers.set(OUTLET_ID, outletId);
                         }
                     }

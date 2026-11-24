@@ -5,7 +5,6 @@ import com.ambatucode.dikichi.catalog.dto.ErrorDetail;
 import com.ambatucode.dikichi.catalog.dto.TableCreateRequest;
 import com.ambatucode.dikichi.catalog.dto.TableResponse;
 import com.ambatucode.dikichi.catalog.entity.DiningTable;
-import com.ambatucode.dikichi.catalog.entity.Role;
 import com.ambatucode.dikichi.catalog.exception.ApiException;
 import com.ambatucode.dikichi.catalog.mapper.CatalogMapper;
 import com.ambatucode.dikichi.catalog.repository.DiningTableRepository;
@@ -37,7 +36,7 @@ public class TableService {
 
     @Transactional
     public TableResponse create(String outletId, TableCreateRequest request) {
-        caller.requireRole(Role.MASTER);
+        caller.requireSameOutlet(outletId);
         requireActiveOutlet(outletId);
         if (tables.existsByOutletIdAndCodeAndDeletedFalse(outletId, request.code())) {
             throw ApiException.conflict("DUPLICATE_TABLE_CODE", "Table code already exists in this outlet",
@@ -48,7 +47,7 @@ public class TableService {
 
     @Transactional
     public void delete(String outletId, String code) {
-        caller.requireRole(Role.MASTER);
+        caller.requireSameOutlet(outletId);
         requireActiveOutlet(outletId);
         tables.findByOutletIdAndCodeAndDeletedFalse(outletId, code)
                 .orElseThrow(() -> ApiException.notFound("Table not found"))

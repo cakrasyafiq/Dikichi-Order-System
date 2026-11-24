@@ -8,7 +8,7 @@ import { useLogin } from './useLogin';
 
 export function LoginForm() {
   const login = useLogin();
-  const [username, setUsername] = useState('');
+  const [outletId, setOutletId] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<LoginFormErrors>({});
 
@@ -16,7 +16,7 @@ export function LoginForm() {
     event.preventDefault();
     // WHY: a second submit while a login is in flight would only repeat the slow password hash on the server.
     if (login.isPending) return;
-    const checked = validateLoginForm({ username, password });
+    const checked = validateLoginForm({ outletId, password });
     setErrors(checked.ok ? {} : checked.errors);
     if (checked.ok) login.mutate(checked.data);
   }
@@ -24,16 +24,16 @@ export function LoginForm() {
   return (
     <form noValidate onSubmit={handleSubmit}>
       <TextField
-        id="username"
-        label="Username"
-        value={username}
+        id="outletId"
+        label="Outlet ID"
+        value={outletId}
         onChange={(value) => {
-          setUsername(value);
+          setOutletId(value);
           login.reset();
         }}
         autoComplete="username"
-        maxLength={LOGIN_LIMITS.usernameMaxLength}
-        error={errors.username}
+        maxLength={LOGIN_LIMITS.outletIdMaxLength}
+        error={errors.outletId}
       />
       <TextField
         id="password"

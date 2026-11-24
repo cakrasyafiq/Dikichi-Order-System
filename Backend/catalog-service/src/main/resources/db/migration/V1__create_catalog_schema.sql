@@ -41,13 +41,6 @@ CREATE INDEX ix_menu_item_outlet ON menu_item (outlet_id);
 
 CREATE TABLE staff_user (
     id             UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
-    username       VARCHAR(50)   NOT NULL UNIQUE,
-    password_hash  VARCHAR(100)  NOT NULL,
-    role           VARCHAR(10)   NOT NULL,
-    outlet_id      VARCHAR(20)   REFERENCES outlet (id),
-    CONSTRAINT ck_staff_user_role CHECK (role IN ('MASTER', 'CASHIER', 'KITCHEN')),
-    CONSTRAINT ck_staff_user_outlet_scope CHECK (
-        (role = 'MASTER' AND outlet_id IS NULL) OR
-        (role <> 'MASTER' AND outlet_id IS NOT NULL)
-    )
+    outlet_id      VARCHAR(20)   NOT NULL UNIQUE REFERENCES outlet (id),
+    password_hash  VARCHAR(100)  NOT NULL
 );

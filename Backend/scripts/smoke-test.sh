@@ -47,7 +47,7 @@ check() {
 }
 
 login() {
-  call POST /api/v1/auth/login "" "{\"username\":\"$1\",\"password\":\"$2\"}"
+  call POST /api/v1/auth/login "" "{\"outletId\":\"$1\",\"password\":\"$2\"}"
   field '.accessToken'
 }
 
@@ -56,13 +56,12 @@ order_body() {
 }
 
 echo "== Auth =="
-call POST /api/v1/auth/login "" "{\"username\":\"cashier\",\"password\":\"wrong-password\"}"
+call POST /api/v1/auth/login "" "{\"outletId\":\"OUT-01\",\"password\":\"wrong-password\"}"
 check "login with wrong password" 401 UNAUTHORIZED
-MASTER=$(login master "$SEED_MASTER_PASSWORD")
-CASHIER=$(login cashier "$SEED_CASHIER_PASSWORD")
-KITCHEN=$(login kitchen "$SEED_KITCHEN_PASSWORD")
-[ -n "$MASTER" ] && [ -n "$CASHIER" ] && [ -n "$KITCHEN" ] && { PASS=$((PASS + 1)); echo "PASS  login master, cashier, kitchen"; } \
-  || { FAIL=$((FAIL + 1)); echo "FAIL  login master, cashier, kitchen (cannot continue)"; exit 1; }
+OUTLET_PASS="${SEED_OUTLET_PASSWORD:-${SEED_CASHIER_PASSWORD:-${SEED_MASTER_PASSWORD:-}}}"
+OUTLET_TOKEN=$(login OUT-01 "$OUTLET_PASS")
+[ -n "$OUTLET_TOKEN" ] && { PASS=$((PASS + 1)); echo "PASS  login OUT-01"; } \
+  || { FAIL=$((FAIL + 1)); echo "FAIL  login OUT-01 (cannot continue)"; exit 1; }
 
 echo "== Catalog GET (public) =="
 call GET /api/v1/outlets; check "GET outlets" 200
@@ -72,19 +71,19 @@ call GET /api/v1/outlets/OUT-01/tables; check "GET tables" 200
 call GET /api/v1/outlets/OUT-01/menu-items; check "GET menu items" 200
 call GET "/api/v1/menu-items/$MENU_MIE"; check "GET menu item by id" 200
 
-echo "== Catalog POST =="
-call POST /api/v1/outlets "$CASHIER" '{"id":"OUT-99","name":"Outlet Uji","address":"Jl. Uji No. 1"}'
-check "POST outlet as CASHIER" 403 FORBIDDEN
-call POST /api/v1/outlets "$MASTER" '{"id":"OUT-99","name":"Outlet Uji","address":"Jl. Uji No. 1"}'
-check "POST outlet as MASTER" 201
-call POST /api/v1/outlets "$MASTER" '{"id":"OUT-99","name":"Outlet Uji","address":"Jl. Uji No. 1"}'
+echo "== Catalog POST & Outlet Isolation =="
+call POST /api/v1/outlets "$OUTLET_TOKEN" '{"id":"OUT-99","name":"Outlet Uji","address":"Jl. Uji No. 1"}'
+check "POST another outlet as OUT-01" 403 FORBIDDEN
+call POST /api/v1/outlets "$OUTLET_TOKEN" '{"id":"OUT-01","name":"Outlet Uji","address":"Jl. Uji No. 1"}'
 check "POST outlet duplicate id" 409 DUPLICATE_OUTLET_ID
-call POST /api/v1/outlets "$MASTER" '{"id":"BAD","name":"","address":""}'
+call POST /api/v1/outlets "$OUTLET_TOKEN" '{"id":"BAD","name":"","address":""}'
 check "POST outlet invalid body" 400 VALIDATION_ERROR
-call POST /api/v1/outlets/OUT-01/tables "$MASTER" '{"code":"T-21"}'; check "POST table" 201
-call POST /api/v1/outlets/OUT-01/tables "$MASTER" '{"code":"T-21"}'; check "POST table duplicate" 409 DUPLICATE_TABLE_CODE
-call POST /api/v1/outlets/OUT-01/menu-items "$MASTER" '{"name":"Menu Uji","price":15000,"category":"Uji"}'
-check "POST menu item" 201
+call POST /api/v1/outlets/OUT-02/tables "$OUTLET_TOKEN" '{"code":"T-21"}'
+check "POST table in another outlet" 403 FORBIDDEN
+call POST /api/v1/outlets/OUT-01/tables "$OUTLET_TOKEN" '{"code":"T-21"}'; check "POST table in own outlet" 201
+call POST /api/v1/outlets/OUT-01/tables "$OUTLET_TOKEN" '{"code":"T-21"}'; check "POST table duplicate" 409 DUPLICATE_TABLE_CODE
+call POST /api/v1/outlets/OUT-01/menu-items "$OUTLET_TOKEN" '{"name":"Menu Uji","price":15000,"category":"Uji"}'
+check "POST menu item in own outlet" 201
 NEW_MENU=$(field '.id')
 
 echo "== Orders POST and GET =="
@@ -97,58 +96,51 @@ call POST /api/v1/orders "" "$(order_body OUT-01 T-99 Budi "$ITEMS_OK")"; check 
 call POST /api/v1/orders "" "$(order_body OUT-01 T-01 Budi "[{\"menuItemId\":\"$MENU_MIE\",\"quantity\":1},{\"menuItemId\":\"$MENU_MIE\",\"quantity\":1}]")"
 check "POST order duplicate item" 400 DUPLICATE_MENU_ITEM
 call GET /api/v1/orders; check "GET orders without token" 401 UNAUTHORIZED
-call GET /api/v1/orders "$CASHIER"; check "GET orders as CASHIER" 200
-call GET "/api/v1/orders?status=PREPARING" "$CASHIER"; check "GET orders PREPARING as CASHIER" 403 FORBIDDEN
-call GET "/api/v1/orders/$ORDER_ID" "$CASHIER"; check "GET order by id" 200
-call GET "/api/v1/orders/$ORDER_ID" "$MASTER"; check "GET order as MASTER" 403 FORBIDDEN
+call GET /api/v1/orders "$OUTLET_TOKEN"; check "GET orders as OUT-01" 200
+call GET "/api/v1/orders?outletId=OUT-02" "$OUTLET_TOKEN"; check "GET orders for another outlet" 403 FORBIDDEN
+call GET "/api/v1/orders/$ORDER_ID" "$OUTLET_TOKEN"; check "GET order by id" 200
 
 echo "== Orders PUT and PATCH =="
 ITEMS_NEW="[{\"menuItemId\":\"$MENU_MIE\",\"quantity\":1},{\"menuItemId\":\"$MENU_ES_TEH\",\"quantity\":2}]"
-call PUT "/api/v1/orders/$ORDER_ID" "$CASHIER" "$(order_body OUT-01 T-02 "Budi Santoso" "$ITEMS_NEW")"
+call PUT "/api/v1/orders/$ORDER_ID" "$OUTLET_TOKEN" "$(order_body OUT-01 T-02 "Budi Santoso" "$ITEMS_NEW")"
 check "PUT order PENDING" 200
 [ "$(field '.totalAmount')" = "22000" ] && { PASS=$((PASS + 1)); echo "PASS  PUT order total recalculated to 22000"; } \
   || { FAIL=$((FAIL + 1)); echo "FAIL  PUT order total expected 22000, got $(field '.totalAmount')"; }
-call PUT "/api/v1/orders/$ORDER_ID" "$CASHIER" "$(order_body OUT-02 T-02 Budi "$ITEMS_NEW")"
+call PUT "/api/v1/orders/$ORDER_ID" "$OUTLET_TOKEN" "$(order_body OUT-02 T-02 Budi "$ITEMS_NEW")"
 check "PUT order changing outlet" 400 OUTLET_IMMUTABLE
-call PATCH "/api/v1/orders/$ORDER_ID/status" "$KITCHEN" '{"status":"CANCELLED"}'; check "PATCH CANCELLED as KITCHEN" 403 FORBIDDEN
-call PATCH "/api/v1/orders/$ORDER_ID/status" "$CASHIER" '{"status":"PREPARING"}'; check "PATCH PREPARING" 409 INVALID_STATUS_TRANSITION
-call PATCH "/api/v1/orders/$ORDER_ID/status" "$CASHIER" '{"status":"NOPE"}'; check "PATCH unknown status" 400 VALIDATION_ERROR
-call PATCH "/api/v1/orders/$ORDER_ID/status" "$MASTER" '{"status":"ACCEPTED"}'; check "PATCH as MASTER" 403 FORBIDDEN
-call PATCH "/api/v1/orders/$ORDER_ID/status" "$CASHIER" '{"status":"ACCEPTED"}'; check "PATCH ACCEPTED" 200
-call PATCH "/api/v1/orders/$ORDER_ID/status" "$CASHIER" '{"status":"ACCEPTED"}'; check "PATCH ACCEPTED again" 409 INVALID_STATUS_TRANSITION
-call PUT "/api/v1/orders/$ORDER_ID" "$CASHIER" "$(order_body OUT-01 T-02 Budi "$ITEMS_NEW")"; check "PUT order ACCEPTED" 409 ORDER_NOT_EDITABLE
+call PATCH "/api/v1/orders/$ORDER_ID/status" "$OUTLET_TOKEN" '{"status":"PREPARING"}'; check "PATCH PREPARING" 409 INVALID_STATUS_TRANSITION
+call PATCH "/api/v1/orders/$ORDER_ID/status" "$OUTLET_TOKEN" '{"status":"NOPE"}'; check "PATCH unknown status" 400 VALIDATION_ERROR
+call PATCH "/api/v1/orders/$ORDER_ID/status" "$OUTLET_TOKEN" '{"status":"ACCEPTED"}'; check "PATCH ACCEPTED" 200
+call PATCH "/api/v1/orders/$ORDER_ID/status" "$OUTLET_TOKEN" '{"status":"ACCEPTED"}'; check "PATCH ACCEPTED again" 409 INVALID_STATUS_TRANSITION
+call PUT "/api/v1/orders/$ORDER_ID" "$OUTLET_TOKEN" "$(order_body OUT-01 T-02 Budi "$ITEMS_NEW")"; check "PUT order ACCEPTED" 409 ORDER_NOT_EDITABLE
 
 echo "== Payment =="
 call POST "/api/v1/orders/$ORDER_ID/pay" "" '{"paymentMethod":"CASH","amountTendered":50000}'; check "pay without token" 401 UNAUTHORIZED
-call POST "/api/v1/orders/$ORDER_ID/pay" "$CASHIER" '{"paymentMethod":"CASH","amountTendered":1000}'; check "pay CASH insufficient" 400 VALIDATION_ERROR
-call POST "/api/v1/orders/$ORDER_ID/pay" "$CASHIER" '{"paymentMethod":"CARD","amountTendered":50000}'; check "pay CARD with amountTendered" 400 VALIDATION_ERROR
-call POST "/api/v1/orders/$ORDER_ID/pay" "$CASHIER" '{"paymentMethod":"CASH","amountTendered":50000}'; check "pay CASH" 200
+call POST "/api/v1/orders/$ORDER_ID/pay" "$OUTLET_TOKEN" '{"paymentMethod":"CASH","amountTendered":1000}'; check "pay CASH insufficient" 400 VALIDATION_ERROR
+call POST "/api/v1/orders/$ORDER_ID/pay" "$OUTLET_TOKEN" '{"paymentMethod":"CARD","amountTendered":50000}'; check "pay CARD with amountTendered" 400 VALIDATION_ERROR
+call POST "/api/v1/orders/$ORDER_ID/pay" "$OUTLET_TOKEN" '{"paymentMethod":"CASH","amountTendered":50000}'; check "pay CASH" 200
 [ "$(field '.status')" = "PREPARING" ] && { PASS=$((PASS + 1)); echo "PASS  paid order is PREPARING"; } \
   || { FAIL=$((FAIL + 1)); echo "FAIL  paid order status expected PREPARING, got $(field '.status')"; }
-call POST "/api/v1/orders/$ORDER_ID/pay" "$CASHIER" '{"paymentMethod":"CASH","amountTendered":50000}'; check "pay twice" 409 ORDER_ALREADY_PAID
+call POST "/api/v1/orders/$ORDER_ID/pay" "$OUTLET_TOKEN" '{"paymentMethod":"CASH","amountTendered":50000}'; check "pay twice" 409 ORDER_ALREADY_PAID
 
-echo "== Kitchen =="
-call GET "/api/v1/orders?status=PREPARING" "$KITCHEN"; check "GET PREPARING as KITCHEN" 200
-call PATCH "/api/v1/orders/$ORDER_ID/status" "$KITCHEN" '{"status":"READY"}'; check "PATCH READY" 200
-call PATCH "/api/v1/orders/$ORDER_ID/status" "$CASHIER" '{"status":"COMPLETED"}'; check "PATCH COMPLETED as CASHIER" 403 FORBIDDEN
-call PATCH "/api/v1/orders/$ORDER_ID/status" "$KITCHEN" '{"status":"COMPLETED"}'; check "PATCH COMPLETED" 200
+echo "== Kitchen Queue & Completion =="
+call GET "/api/v1/orders?status=PREPARING" "$OUTLET_TOKEN"; check "GET PREPARING as OUT-01" 200
+call PATCH "/api/v1/orders/$ORDER_ID/status" "$OUTLET_TOKEN" '{"status":"READY"}'; check "PATCH READY" 200
+call PATCH "/api/v1/orders/$ORDER_ID/status" "$OUTLET_TOKEN" '{"status":"COMPLETED"}'; check "PATCH COMPLETED" 200
 
 echo "== Catalog PUT, PATCH, DELETE =="
-call PUT /api/v1/outlets/OUT-99 "$CASHIER" '{"name":"Outlet Uji 2","address":"Jl. Uji No. 2"}'; check "PUT outlet as CASHIER" 403 FORBIDDEN
-call PUT /api/v1/outlets/OUT-99 "$MASTER" '{"name":"Outlet Uji 2","address":"Jl. Uji No. 2"}'; check "PUT outlet" 200
-call PUT /api/v1/outlets/OUT-99 "$MASTER" '{"name":"","address":"x"}'; check "PUT outlet empty name" 400 VALIDATION_ERROR
-call PUT "/api/v1/menu-items/$NEW_MENU" "$MASTER" '{"name":"Menu Uji 2","price":0,"category":"Uji","available":true}'
+call PUT /api/v1/outlets/OUT-99 "$OUTLET_TOKEN" '{"name":"Outlet Uji 2","address":"Jl. Uji No. 2"}'; check "PUT another outlet as OUT-01" 403 FORBIDDEN
+call PUT /api/v1/outlets/OUT-01 "$OUTLET_TOKEN" '{"name":"","address":"x"}'; check "PUT outlet empty name" 400 VALIDATION_ERROR
+call PUT "/api/v1/menu-items/$NEW_MENU" "$OUTLET_TOKEN" '{"name":"Menu Uji 2","price":0,"category":"Uji","available":true}'
 check "PUT menu item price 0" 400 VALIDATION_ERROR
-call PUT "/api/v1/menu-items/$NEW_MENU" "$MASTER" '{"name":"Menu Uji 2","price":16000,"category":"Uji","available":true}'
+call PUT "/api/v1/menu-items/$NEW_MENU" "$OUTLET_TOKEN" '{"name":"Menu Uji 2","price":16000,"category":"Uji","available":true}'
 check "PUT menu item" 200
-call PATCH "/api/v1/menu-items/$NEW_MENU/availability" "$CASHIER" '{"available":false}'; check "PATCH availability as CASHIER" 200
-call PATCH "/api/v1/menu-items/$NEW_MENU/availability" "$CASHIER" '{}'; check "PATCH availability empty body" 400 VALIDATION_ERROR
-call DELETE "/api/v1/menu-items/$NEW_MENU" "$CASHIER"; check "DELETE menu item as CASHIER" 403 FORBIDDEN
-call DELETE "/api/v1/menu-items/$NEW_MENU" "$MASTER"; check "DELETE menu item" 204
-call DELETE "/api/v1/menu-items/$NEW_MENU" "$MASTER"; check "DELETE menu item again" 404 NOT_FOUND
-call DELETE /api/v1/outlets/OUT-01/tables/T-21 "$MASTER"; check "DELETE table" 204
-call DELETE /api/v1/outlets/OUT-99 "$MASTER"; check "DELETE outlet" 204
-call DELETE /api/v1/outlets/OUT-99 "$MASTER"; check "DELETE outlet again" 404 NOT_FOUND
+call PATCH "/api/v1/menu-items/$NEW_MENU/availability" "$OUTLET_TOKEN" '{"available":false}'; check "PATCH availability as OUT-01" 200
+call PATCH "/api/v1/menu-items/$NEW_MENU/availability" "$OUTLET_TOKEN" '{}'; check "PATCH availability empty body" 400 VALIDATION_ERROR
+call DELETE "/api/v1/menu-items/$NEW_MENU" "$OUTLET_TOKEN"; check "DELETE menu item" 204
+call DELETE "/api/v1/menu-items/$NEW_MENU" "$OUTLET_TOKEN"; check "DELETE menu item again" 404 NOT_FOUND
+call DELETE /api/v1/outlets/OUT-01/tables/T-21 "$OUTLET_TOKEN"; check "DELETE table" 204
+call DELETE /api/v1/outlets/OUT-99 "$OUTLET_TOKEN"; check "DELETE another outlet" 403 FORBIDDEN
 
 echo "== Gateway =="
 call POST /internal/orders/validate "" '{}'; check "internal route is not exposed" 404

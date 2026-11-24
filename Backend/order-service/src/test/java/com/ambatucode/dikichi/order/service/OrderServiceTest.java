@@ -17,7 +17,6 @@ import com.ambatucode.dikichi.order.dto.common.OrderStatusPatchRequest;
 import com.ambatucode.dikichi.order.entity.Order;
 import com.ambatucode.dikichi.order.entity.OrderItem;
 import com.ambatucode.dikichi.order.entity.OrderStatus;
-import com.ambatucode.dikichi.order.entity.Role;
 import com.ambatucode.dikichi.order.exception.ApiException;
 import com.ambatucode.dikichi.order.repository.OrderRepository;
 import java.util.List;
@@ -117,58 +116,29 @@ class OrderServiceTest {
     }
 
     @Test
-    void cashierListsPendingAndAcceptedByDefault() {
-        caller.populate(Role.CASHIER, "OUT-01");
+    void outletAdminListsAllStatusesForOwnOutletByDefault() {
+        caller.populate("OUT-01");
 
         service.list(null, null);
 
         verify(orders).findByOutletIdAndStatusInOrderByCreatedAtAsc(
-                eq("OUT-01"), eq(Set.of(OrderStatus.PENDING, OrderStatus.ACCEPTED)));
+                eq("OUT-01"), eq(Set.of(OrderStatus.values())));
     }
 
     @Test
-    void kitchenListsPreparingAndReadyByDefault() {
-        caller.populate(Role.KITCHEN, "OUT-01");
+    void explicitStatusFilterIsAllowedForOwnOutlet() {
+        caller.populate("OUT-01");
 
-        service.list(null, null);
+        service.list("OUT-01", OrderStatus.PREPARING);
 
-        verify(orders).findByOutletIdAndStatusInOrderByCreatedAtAsc(
-                eq("OUT-01"), eq(Set.of(OrderStatus.PREPARING, OrderStatus.READY)));
-    }
-
-    @Test
-    void explicitStatusInsideRoleQueueIsAllowed() {
-        caller.populate(Role.CASHIER, "OUT-01");
-
-        service.list("OUT-01", OrderStatus.PENDING);
-
-        verify(orders).findByOutletIdAndStatusInOrderByCreatedAtAsc(eq("OUT-01"), eq(Set.of(OrderStatus.PENDING)));
-    }
-
-    @Test
-    void statusOutsideRoleQueueIsForbidden() {
-        caller.populate(Role.CASHIER, "OUT-01");
-
-        ApiException error = assertApiError(() -> service.list(null, OrderStatus.PREPARING));
-
-        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
-        assertThat(error.getCode()).isEqualTo("FORBIDDEN");
+        verify(orders).findByOutletIdAndStatusInOrderByCreatedAtAsc(eq("OUT-01"), eq(Set.of(OrderStatus.PREPARING)));
     }
 
     @Test
     void listingAnotherOutletIsForbidden() {
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
 
         ApiException error = assertApiError(() -> service.list("OUT-02", null));
-
-        assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
-    }
-
-    @Test
-    void masterCannotListOrders() {
-        caller.populate(Role.MASTER, null);
-
-        ApiException error = assertApiError(() -> service.list(null, null));
 
         assertThat(error.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
     }
@@ -182,7 +152,7 @@ class OrderServiceTest {
 
     @Test
     void getUnknownOrderReturnsNotFound() {
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         when(orders.findWithItemsById(id)).thenReturn(Optional.empty());
 
@@ -194,7 +164,7 @@ class OrderServiceTest {
 
     @Test
     void getOrderFromAnotherOutletIsForbidden() {
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         when(orders.findWithItemsById(id))
                 .thenReturn(Optional.of(new Order("ORD-0001", "OUT-02", "T-01", "Budi")));
@@ -206,7 +176,7 @@ class OrderServiceTest {
 
     @Test
     void getOrderReturnsOrderOfTheSameOutlet() {
-        caller.populate(Role.KITCHEN, "OUT-01");
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         Order stored = new Order("ORD-0001", "OUT-01", "T-01", "Budi");
         when(orders.findWithItemsById(id)).thenReturn(Optional.of(stored));
@@ -218,7 +188,7 @@ class OrderServiceTest {
 
     @Test
     void replaceUpdatesTableCustomerAndItemsAndRecalculatesTotal() {
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         Order stored = new Order("ORD-0001", "OUT-01", "T-01", "Budi");
         stored.addItem(new OrderItem(MENU_MIE, "Mie Suit", 25000, 2));
@@ -242,8 +212,7 @@ class OrderServiceTest {
     }
 
     @Test
-    void nonCashierCannotReplaceOrder() {
-        caller.populate(Role.KITCHEN, "OUT-01");
+    void anonymousCallerCannotReplaceOrder() {
         UUID id = UUID.randomUUID();
         CreateOrderCommand command = new CreateOrderCommand("OUT-01", "T-01", "Budi",
                 List.of(new OrderItemRequest(MENU_MIE, 1)));
@@ -257,7 +226,7 @@ class OrderServiceTest {
 
     @Test
     void replacingUnknownOrderReturnsNotFound() {
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         when(orders.findWithItemsById(id)).thenReturn(Optional.empty());
         CreateOrderCommand command = new CreateOrderCommand("OUT-01", "T-01", "Budi",
@@ -272,7 +241,7 @@ class OrderServiceTest {
 
     @Test
     void replacingOrderOfAnotherOutletIsForbidden() {
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         when(orders.findWithItemsById(id)).thenReturn(Optional.of(new Order("ORD-0001", "OUT-02", "T-01", "Budi")));
         CreateOrderCommand command = new CreateOrderCommand("OUT-02", "T-01", "Budi",
@@ -287,7 +256,7 @@ class OrderServiceTest {
 
     @Test
     void replacingOrderWithDifferentOutletIsRejected() {
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         when(orders.findWithItemsById(id)).thenReturn(Optional.of(new Order("ORD-0001", "OUT-01", "T-01", "Budi")));
         CreateOrderCommand command = new CreateOrderCommand("OUT-02", "T-01", "Budi",
@@ -303,7 +272,7 @@ class OrderServiceTest {
 
     @Test
     void replacingNonPendingOrderIsRejected() {
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         Order stored = new Order("ORD-0001", "OUT-01", "T-01", "Budi");
         stored.changeStatus(OrderStatus.ACCEPTED);
@@ -320,7 +289,7 @@ class OrderServiceTest {
 
     @Test
     void replacingOrderWithDuplicateMenuItemIsRejectedBeforeCatalogCall() {
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         when(orders.findWithItemsById(id)).thenReturn(Optional.of(new Order("ORD-0001", "OUT-01", "T-01", "Budi")));
         CreateOrderCommand command = new CreateOrderCommand("OUT-01", "T-01", "Budi",
@@ -335,7 +304,7 @@ class OrderServiceTest {
 
     @Test
     void catalogRejectionOnReplacePreventsUpdate() {
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         when(orders.findWithItemsById(id)).thenReturn(Optional.of(new Order("ORD-0001", "OUT-01", "T-01", "Budi")));
         when(catalogClient.validate(any(), any(), any())).thenThrow(
@@ -351,8 +320,8 @@ class OrderServiceTest {
     }
 
     @Test
-    void cashierAcceptsPendingOrder() {
-        caller.populate(Role.CASHIER, "OUT-01");
+    void outletAdminAcceptsPendingOrder() {
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         Order stored = new Order("ORD-0001", "OUT-01", "T-01", "Budi");
         when(orders.findWithItemsById(id)).thenReturn(Optional.of(stored));
@@ -364,8 +333,8 @@ class OrderServiceTest {
     }
 
     @Test
-    void cashierCancelsPendingAndAcceptedOrders() {
-        caller.populate(Role.CASHIER, "OUT-01");
+    void outletAdminCancelsPendingAndAcceptedOrders() {
+        caller.populate("OUT-01");
         UUID pendingId = UUID.randomUUID();
         Order pending = new Order("ORD-0001", "OUT-01", "T-01", "Budi");
         when(orders.findWithItemsById(pendingId)).thenReturn(Optional.of(pending));
@@ -382,8 +351,8 @@ class OrderServiceTest {
     }
 
     @Test
-    void kitchenMovesOrderFromPreparingToReadyAndCompleted() {
-        caller.populate(Role.KITCHEN, "OUT-01");
+    void outletAdminMovesOrderFromPreparingToReadyAndCompleted() {
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         Order stored = new Order("ORD-0001", "OUT-01", "T-01", "Budi");
         stored.changeStatus(OrderStatus.PREPARING);
@@ -397,21 +366,17 @@ class OrderServiceTest {
     }
 
     @Test
-    void masterAndAnonymousCannotUpdateOrderStatus() {
+    void anonymousCannotUpdateOrderStatus() {
         UUID id = UUID.randomUUID();
 
         ApiException anonError = assertApiError(() -> service.updateStatus(id, new OrderStatusPatchRequest("ACCEPTED")));
         assertThat(anonError.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
-
-        caller.populate(Role.MASTER, null);
-        ApiException masterError = assertApiError(() -> service.updateStatus(id, new OrderStatusPatchRequest("ACCEPTED")));
-        assertThat(masterError.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
         verifyNoInteractions(orders);
     }
 
     @Test
     void blankOrUnknownStatusIsRejectedBeforeLookingUpOrder() {
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
 
         ApiException blankError = assertApiError(() -> service.updateStatus(id, new OrderStatusPatchRequest("  ")));
@@ -428,7 +393,7 @@ class OrderServiceTest {
 
     @Test
     void updatingStatusOfUnknownOrderReturnsNotFound() {
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         when(orders.findWithItemsById(id)).thenReturn(Optional.empty());
 
@@ -440,7 +405,7 @@ class OrderServiceTest {
 
     @Test
     void updatingStatusOfOrderFromAnotherOutletIsForbidden() {
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         when(orders.findWithItemsById(id)).thenReturn(Optional.of(new Order("ORD-0001", "OUT-02", "T-01", "Budi")));
 
@@ -452,7 +417,7 @@ class OrderServiceTest {
 
     @Test
     void patchingToPendingOrPreparingIsRejectedAsInvalidTransition() {
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
         UUID id = UUID.randomUUID();
         Order stored = new Order("ORD-0001", "OUT-01", "T-01", "Budi");
         stored.changeStatus(OrderStatus.ACCEPTED);
@@ -468,36 +433,17 @@ class OrderServiceTest {
     }
 
     @Test
-    void kitchenCannotCancelAndCashierCannotMarkReadyOrCompleted() {
-        UUID id = UUID.randomUUID();
-        Order stored = new Order("ORD-0001", "OUT-01", "T-01", "Budi");
-        when(orders.findWithItemsById(id)).thenReturn(Optional.of(stored));
-
-        caller.populate(Role.KITCHEN, "OUT-01");
-        ApiException kitchenCancel = assertApiError(() -> service.updateStatus(id, new OrderStatusPatchRequest("CANCELLED")));
-        assertThat(kitchenCancel.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
-        assertThat(kitchenCancel.getCode()).isEqualTo("FORBIDDEN");
-
-        caller.populate(Role.CASHIER, "OUT-01");
-        stored.changeStatus(OrderStatus.PREPARING);
-        ApiException cashierReady = assertApiError(() -> service.updateStatus(id, new OrderStatusPatchRequest("READY")));
-        assertThat(cashierReady.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
-        assertThat(cashierReady.getCode()).isEqualTo("FORBIDDEN");
-    }
-
-    @Test
     void disallowedTransitionFromCurrentStatusReturnsConflict() {
         UUID id = UUID.randomUUID();
         Order stored = new Order("ORD-0001", "OUT-01", "T-01", "Budi");
         when(orders.findWithItemsById(id)).thenReturn(Optional.of(stored));
 
-        caller.populate(Role.CASHIER, "OUT-01");
+        caller.populate("OUT-01");
         stored.changeStatus(OrderStatus.ACCEPTED);
         ApiException acceptAgain = assertApiError(() -> service.updateStatus(id, new OrderStatusPatchRequest("ACCEPTED")));
         assertThat(acceptAgain.getStatus()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(acceptAgain.getCode()).isEqualTo("INVALID_STATUS_TRANSITION");
 
-        caller.populate(Role.KITCHEN, "OUT-01");
         stored.changeStatus(OrderStatus.PREPARING);
         ApiException skipReady = assertApiError(() -> service.updateStatus(id, new OrderStatusPatchRequest("COMPLETED")));
         assertThat(skipReady.getStatus()).isEqualTo(HttpStatus.CONFLICT);

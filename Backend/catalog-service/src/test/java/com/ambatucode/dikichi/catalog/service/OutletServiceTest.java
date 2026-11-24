@@ -13,7 +13,6 @@ import com.ambatucode.dikichi.catalog.dto.OutletCreateRequest;
 import com.ambatucode.dikichi.catalog.dto.OutletReplaceRequest;
 import com.ambatucode.dikichi.catalog.dto.OutletResponse;
 import com.ambatucode.dikichi.catalog.entity.Outlet;
-import com.ambatucode.dikichi.catalog.entity.Role;
 import com.ambatucode.dikichi.catalog.exception.ApiException;
 import com.ambatucode.dikichi.catalog.repository.OutletRepository;
 import java.util.List;
@@ -34,8 +33,8 @@ class OutletServiceTest {
     }
 
     @Test
-    void masterCreatesOutletWithTrimmedFields() {
-        caller.populate(Role.MASTER, null);
+    void outletAdminCreatesOwnOutletWithTrimmedFields() {
+        caller.populate("OUT-05");
         when(outlets.existsById("OUT-05")).thenReturn(false);
 
         OutletResponse response = service.create(new OutletCreateRequest("OUT-05", "  Dikichi 05 ", "  Jl. Uji No. 5 "));
@@ -47,7 +46,7 @@ class OutletServiceTest {
 
     @Test
     void duplicateOutletIdIsRejected() {
-        caller.populate(Role.MASTER, null);
+        caller.populate("OUT-01");
         when(outlets.existsById("OUT-01")).thenReturn(true);
 
         ApiException error = assertApiError(() -> service.create(new OutletCreateRequest("OUT-01", "Nama", "Alamat")));
@@ -58,8 +57,8 @@ class OutletServiceTest {
     }
 
     @Test
-    void nonMasterCannotCreateOutlet() {
-        caller.populate(Role.CASHIER, "OUT-01");
+    void anotherOutletCannotCreateOutletForDifferentId() {
+        caller.populate("OUT-01");
 
         ApiException error = assertApiError(() -> service.create(new OutletCreateRequest("OUT-05", "Nama", "Alamat")));
 
@@ -102,8 +101,8 @@ class OutletServiceTest {
     }
 
     @Test
-    void masterReplacesOutletWithTrimmedFields() {
-        caller.populate(Role.MASTER, null);
+    void outletAdminReplacesOwnOutletWithTrimmedFields() {
+        caller.populate("OUT-01");
         Outlet existing = new Outlet("OUT-01", "Lama", "Alamat Lama");
         when(outlets.findByIdAndDeletedFalse("OUT-01")).thenReturn(Optional.of(existing));
 
@@ -117,7 +116,7 @@ class OutletServiceTest {
 
     @Test
     void replacingUnknownOutletReturnsNotFound() {
-        caller.populate(Role.MASTER, null);
+        caller.populate("OUT-404");
         when(outlets.findByIdAndDeletedFalse("OUT-404")).thenReturn(Optional.empty());
 
         ApiException error = assertApiError(() -> service.replace("OUT-404",
@@ -128,8 +127,8 @@ class OutletServiceTest {
     }
 
     @Test
-    void nonMasterCannotReplaceOutlet() {
-        caller.populate(Role.CASHIER, "OUT-01");
+    void anotherOutletCannotReplaceOutlet() {
+        caller.populate("OUT-02");
 
         ApiException error = assertApiError(() -> service.replace("OUT-01",
                 new OutletReplaceRequest("Nama", "Alamat")));
@@ -147,8 +146,8 @@ class OutletServiceTest {
     }
 
     @Test
-    void masterDeletesOutletWithSoftDelete() {
-        caller.populate(Role.MASTER, null);
+    void outletAdminDeletesOwnOutletWithSoftDelete() {
+        caller.populate("OUT-01");
         Outlet existing = new Outlet("OUT-01", "Dikichi 01", "Jl. A");
         when(outlets.findByIdAndDeletedFalse("OUT-01")).thenReturn(Optional.of(existing));
 
@@ -159,7 +158,7 @@ class OutletServiceTest {
 
     @Test
     void deletingUnknownOutletReturnsNotFound() {
-        caller.populate(Role.MASTER, null);
+        caller.populate("OUT-404");
         when(outlets.findByIdAndDeletedFalse("OUT-404")).thenReturn(Optional.empty());
 
         ApiException error = assertApiError(() -> service.delete("OUT-404"));
@@ -169,8 +168,8 @@ class OutletServiceTest {
     }
 
     @Test
-    void nonMasterCannotDeleteOutlet() {
-        caller.populate(Role.KITCHEN, "OUT-01");
+    void anotherOutletCannotDeleteOutlet() {
+        caller.populate("OUT-02");
 
         ApiException error = assertApiError(() -> service.delete("OUT-01"));
 

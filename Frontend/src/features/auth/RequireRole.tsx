@@ -1,17 +1,17 @@
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import type { StaffRole } from '@/constants/auth';
 import { ROUTES } from '@/constants/routes';
-import { ROLE_HOME } from '@/constants/staff';
+import { ADMIN_HOME } from '@/constants/staff';
 import { useSession } from './useSession';
 
-// WHY: the prop is not named "role" because the jsx-a11y lint rule reads that name as an ARIA role.
-type RequireRoleProps = { allowed: StaffRole; children: ReactNode };
+type RequireRoleProps = { outletId?: string; children: ReactNode };
 
-// WHY: this guard only shapes the UI. Every endpoint still enforces role and outlet scope on the server.
-export function RequireRole({ allowed, children }: RequireRoleProps) {
+// WHY: this guard only shapes the UI. Every endpoint still enforces outlet scope on the server.
+export function RequireRole({ outletId, children }: RequireRoleProps) {
   const session = useSession();
   if (!session) return <Navigate to={ROUTES.login} replace />;
-  if (session.user.role !== allowed) return <Navigate to={ROLE_HOME[session.user.role]} replace />;
+  if (outletId && session.user.outletId !== outletId) {
+    return <Navigate to={ADMIN_HOME} replace />;
+  }
   return <>{children}</>;
 }

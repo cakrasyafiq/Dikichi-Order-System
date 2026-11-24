@@ -1,13 +1,11 @@
 import { z } from 'zod';
-import { SESSION_STORAGE_KEY, STAFF_ROLES } from '@/constants/auth';
+import { SESSION_STORAGE_KEY } from '@/constants/auth';
 
 const sessionSchema = z.object({
   token: z.string().min(1),
   expiresAt: z.number(),
   user: z.object({
-    username: z.string(),
-    role: z.enum(STAFF_ROLES),
-    outletId: z.string().nullable(),
+    outletId: z.string().min(1),
   }),
 });
 

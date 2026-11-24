@@ -6,7 +6,6 @@ import com.ambatucode.dikichi.order.dto.common.PaymentRequest;
 import com.ambatucode.dikichi.order.entity.MockPayment;
 import com.ambatucode.dikichi.order.entity.Order;
 import com.ambatucode.dikichi.order.entity.PaymentMethod;
-import com.ambatucode.dikichi.order.entity.Role;
 import com.ambatucode.dikichi.order.exception.ApiException;
 import com.ambatucode.dikichi.order.repository.MockPaymentRepository;
 import com.ambatucode.dikichi.order.repository.OrderRepository;
@@ -35,7 +34,7 @@ public class PaymentService {
 
     @Transactional
     public Order pay(UUID orderId, PaymentRequest request) {
-        caller.requireRole(Role.CASHIER);
+        caller.requireAuthenticated();
         Order order = orders.findWithItemsById(orderId)
                 .orElseThrow(() -> ApiException.notFound("Order not found"));
         caller.requireSameOutlet(order.getOutletId());

@@ -6,7 +6,6 @@ import com.ambatucode.dikichi.catalog.dto.MenuItemCreateRequest;
 import com.ambatucode.dikichi.catalog.dto.MenuItemReplaceRequest;
 import com.ambatucode.dikichi.catalog.dto.MenuItemResponse;
 import com.ambatucode.dikichi.catalog.entity.MenuItem;
-import com.ambatucode.dikichi.catalog.entity.Role;
 import com.ambatucode.dikichi.catalog.exception.ApiException;
 import com.ambatucode.dikichi.catalog.mapper.CatalogMapper;
 import com.ambatucode.dikichi.catalog.repository.MenuItemRepository;
@@ -46,7 +45,7 @@ public class MenuItemService {
 
     @Transactional
     public MenuItemResponse create(String outletId, MenuItemCreateRequest request) {
-        caller.requireRole(Role.MASTER);
+        caller.requireSameOutlet(outletId);
         requireActiveOutlet(outletId);
         MenuItem item = new MenuItem(outletId, request.name().strip(), request.description(), request.price(),
                 request.category().strip(), normalizeImageUrl(request.imageUrl()), request.availableOrDefault());
@@ -55,8 +54,9 @@ public class MenuItemService {
 
     @Transactional
     public MenuItemResponse replace(UUID menuItemId, MenuItemReplaceRequest request) {
-        caller.requireRole(Role.MASTER);
+        caller.requireAuthenticated();
         MenuItem item = requireActiveItem(menuItemId);
+        caller.requireSameOutlet(item.getOutletId());
         item.replace(request.name().strip(), request.description(), request.price(),
                 request.category().strip(), normalizeImageUrl(request.imageUrl()), request.available());
         return CatalogMapper.toResponse(item);
@@ -64,7 +64,7 @@ public class MenuItemService {
 
     @Transactional
     public MenuItemResponse changeAvailability(UUID menuItemId, AvailabilityPatchRequest request) {
-        caller.requireRole(Role.MASTER, Role.CASHIER, Role.KITCHEN);
+        caller.requireAuthenticated();
         MenuItem item = requireActiveItem(menuItemId);
         caller.requireSameOutlet(item.getOutletId());
         item.changeAvailability(request.available());
@@ -73,8 +73,10 @@ public class MenuItemService {
 
     @Transactional
     public void delete(UUID menuItemId) {
-        caller.requireRole(Role.MASTER);
-        requireActiveItem(menuItemId).markDeleted();
+        caller.requireAuthenticated();
+        MenuItem item = requireActiveItem(menuItemId);
+        caller.requireSameOutlet(item.getOutletId());
+        item.markDeleted();
     }
 
     private static String normalizeImageUrl(String imageUrl) {

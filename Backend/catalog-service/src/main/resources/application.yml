@@ -14,9 +14,7 @@ spring:
       ddl-auto: validate
   flyway:
     placeholders:
-      seed_master_password: ${SEED_MASTER_PASSWORD}
-      seed_cashier_password: ${SEED_CASHIER_PASSWORD}
-      seed_kitchen_password: ${SEED_KITCHEN_PASSWORD}
+      seed_outlet_password: ${SEED_OUTLET_PASSWORD:${SEED_CASHIER_PASSWORD:${SEED_MASTER_PASSWORD}}}
 
 dikichi:
   jwt:
