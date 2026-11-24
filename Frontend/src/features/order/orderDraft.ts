@@ -2,15 +2,15 @@ import { z } from 'zod';
 import { ORDER_LIMITS, TABLE_CODE_PATTERN } from '@/constants/order';
 
 export const orderDraftSchema = z.object({
-  outletId: z.string().min(1, 'The kitchen is not ready yet. Please try again in a moment.'),
-  tableCode: z.string().regex(TABLE_CODE_PATTERN, 'Please choose your table'),
+  outletId: z.string().min(1, 'Outlet belum siap. Silakan coba beberapa saat lagi.'),
+  tableCode: z.string().regex(TABLE_CODE_PATTERN, 'Silakan pilih meja Anda'),
   customerName: z
     .string()
     .trim()
-    .min(1, 'Please enter your name')
+    .min(1, 'Silakan masukkan nama Anda')
     .max(
       ORDER_LIMITS.nameMaxLength,
-      `Name can be at most ${ORDER_LIMITS.nameMaxLength} characters`,
+      `Nama maksimal ${ORDER_LIMITS.nameMaxLength} karakter`,
     ),
   items: z
     .array(
@@ -19,10 +19,10 @@ export const orderDraftSchema = z.object({
         quantity: z.number().int().min(1).max(ORDER_LIMITS.maxQuantity),
       }),
     )
-    .min(1, 'Add at least one dish to your order')
+    .min(1, 'Tambahkan minimal satu hidangan ke pesanan Anda')
     .max(
       ORDER_LIMITS.maxLines,
-      `An order can have at most ${ORDER_LIMITS.maxLines} different dishes`,
+      `Satu pesanan maksimal ${ORDER_LIMITS.maxLines} jenis hidangan`,
     ),
 });
 

@@ -19,7 +19,7 @@ export function OrderConfirmation({ receipt, onDismiss }: OrderConfirmationProps
       className="rounded-lg border border-magenta bg-surface p-6 shadow-card"
     >
       <span className="mb-4 inline-block rounded-[10px] bg-magenta px-[18px] py-2 font-display text-[15px] font-extrabold text-surface">
-        Order Sent
+        Pesanan Terkirim
       </span>
       <h2
         id="confirmation-heading"
@@ -27,20 +27,20 @@ export function OrderConfirmation({ receipt, onDismiss }: OrderConfirmationProps
         tabIndex={-1}
         className="m-0 mb-1 font-display text-xl font-extrabold text-brand focus:outline-none"
       >
-        Thank you, {receipt.customerName}!
+        Terima kasih, {receipt.customerName}!
       </h2>
-      <p className="m-0 mb-4 text-sm text-muted">Show this order number to the cashier.</p>
+      <p className="m-0 mb-4 text-sm text-muted">Tunjukkan nomor pesanan ini kepada kasir.</p>
       <p className="m-0 mb-4 font-display text-[clamp(28px,4vw,40px)] font-black leading-none text-brand">
         {receipt.orderNumber}
       </p>
       <dl className="m-0 mb-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13.5px]">
-        <dt className="font-semibold text-muted">Table</dt>
+        <dt className="font-semibold text-muted">Meja</dt>
         <dd className="m-0 font-bold text-brand">{receipt.tableCode}</dd>
         <dt className="font-semibold text-muted">Status</dt>
         <dd className="m-0 font-bold text-brand">
           {ORDER_STATUS_LABELS[receipt.status] ?? receipt.status}
         </dd>
-        <dt className="font-semibold text-muted">Sent with</dt>
+        <dt className="font-semibold text-muted">Dikirim dengan</dt>
         <dd className="m-0">
           <span className="inline-flex rounded-sm border border-line bg-tint px-[14px] py-[3px] text-[12.5px] font-bold text-brand">
             API {receipt.version}
@@ -68,7 +68,7 @@ export function OrderConfirmation({ receipt, onDismiss }: OrderConfirmationProps
       </div>
       <details className="mb-4">
         <summary className="cursor-pointer text-[13px] font-bold text-brand">
-          Show server response
+          Lihat respons server
         </summary>
         <pre className="mt-2 max-h-72 overflow-auto rounded-sm bg-canvas p-3 text-xs text-brand">
           {JSON.stringify(receipt.raw, null, 2)}
@@ -79,7 +79,7 @@ export function OrderConfirmation({ receipt, onDismiss }: OrderConfirmationProps
         onClick={onDismiss}
         className="rounded-sm border-[1.5px] border-magenta bg-surface px-[14px] py-[7px] text-[12.5px] font-bold text-magenta transition-colors duration-fast hover:bg-tint"
       >
-        Order again
+        Pesan lagi
       </button>
     </section>
   );

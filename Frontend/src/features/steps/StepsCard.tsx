@@ -20,7 +20,7 @@ export function StepsCard() {
         id="steps-heading"
         className="m-0 mb-5 inline-block rounded-[10px] bg-magenta px-[18px] py-2 font-display text-[15px] font-extrabold text-surface"
       >
-        5 Easy Steps
+        5 Langkah Mudah
       </h2>
       <ol className="m-0 grid list-none gap-[18px] p-0 tablet:grid-cols-2 mobile:grid-cols-1">
         {ORDER_STEPS.map((step) => (

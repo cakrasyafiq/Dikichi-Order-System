@@ -7,7 +7,7 @@ export function VersionToggle({ value, onChange }: VersionToggleProps) {
     <div className="mb-4">
       <div className="mb-1 flex items-center justify-between gap-3">
         <span id="api-version-label" className="text-[13.5px] font-semibold text-muted">
-          Demo: order API version
+          Demo: versi API pesanan
         </span>
         <div role="group" aria-labelledby="api-version-label" className="inline-flex gap-2">
           {API_VERSIONS.map((version) => (
@@ -28,7 +28,7 @@ export function VersionToggle({ value, onChange }: VersionToggleProps) {
         </div>
       </div>
       <p className="m-0 text-xs text-muted">
-        Both versions create the same order. Only the data shape differs.
+        Kedua versi membuat pesanan yang sama. Hanya struktur datanya yang berbeda.
       </p>
     </div>
   );

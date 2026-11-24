@@ -6,28 +6,28 @@ export type OrderStep = {
 
 export const ORDER_STEPS: readonly OrderStep[] = [
   {
-    title: 'Choose Your Table',
-    description: 'Scan the QR code on your table or select your table number.',
+    title: 'Pilih Meja Anda',
+    description: 'Pindai kode QR di meja atau pilih nomor meja Anda.',
     icon: 'dineIn',
   },
   {
-    title: 'Browse the Menu',
-    description: 'Pick your favorite dishes in seconds.',
+    title: 'Lihat Menu',
+    description: 'Pilih hidangan favorit Anda dalam hitungan detik.',
     icon: 'grid',
   },
   {
-    title: 'Send Your Order',
-    description: 'Add your name and submit. The cashier confirms it.',
+    title: 'Kirim Pesanan',
+    description: 'Masukkan nama Anda lalu kirim. Kasir akan mengonfirmasinya.',
     icon: 'phone',
   },
   {
-    title: 'Pay at the Cashier',
-    description: 'Pay with cash, QRIS or card at the counter.',
+    title: 'Bayar di Kasir',
+    description: 'Bayar dengan tunai, QRIS, atau kartu di meja kasir.',
     icon: 'card',
   },
   {
-    title: 'Freshly Prepared',
-    description: 'The kitchen cooks your order as soon as payment is confirmed.',
+    title: 'Segera Disiapkan',
+    description: 'Dapur segera memasak pesanan Anda setelah pembayaran dikonfirmasi.',
     icon: 'clock',
   },
 ];

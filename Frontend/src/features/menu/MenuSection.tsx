@@ -24,9 +24,7 @@ function CartPill({ count }: { count: number }) {
       href="#order-summary"
       className="mb-1 inline-flex items-center gap-[6px] whitespace-nowrap rounded-full border border-line bg-tint px-3 py-[5px] text-xs font-bold text-magenta no-underline"
     >
-      <span aria-live="polite">
-        {count} {count === 1 ? 'item' : 'items'}
-      </span>
+      <span aria-live="polite">{count} item</span>
     </a>
   );
 }
@@ -48,9 +46,9 @@ export function MenuSection({ menu, categories, cart }: MenuSectionProps) {
     return (
       <section id="menu-order" aria-label="Menu" className={SECTION_CLASS}>
         <StateMessage
-          title="The menu could not be loaded"
+          title="Menu gagal dimuat"
           detail={describeError(menu.error)}
-          actionLabel="Try again"
+          actionLabel="Coba lagi"
           onAction={() => void menu.refetch()}
         />
       </section>
@@ -62,9 +60,9 @@ export function MenuSection({ menu, categories, cart }: MenuSectionProps) {
     return (
       <section id="menu-order" aria-label="Menu" className={SECTION_CLASS}>
         <StateMessage
-          title="No dishes on the menu yet"
-          detail="Ask the staff to add some, then refresh."
-          actionLabel="Refresh"
+          title="Belum ada menu yang tersedia"
+          detail="Minta staf untuk menambahkan menu, lalu muat ulang."
+          actionLabel="Muat ulang"
           onAction={() => void menu.refetch()}
         />
       </section>

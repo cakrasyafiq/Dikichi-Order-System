@@ -77,7 +77,7 @@ describe('describeError', () => {
     });
     const serverFault = new ApiError({ status: 500, code: 'BOOM', message: 'stack trace here' });
     expect(describeError(clientFault)).toBe('Sold out');
-    expect(describeError(serverFault)).toBe('Something went wrong. Please try again.');
-    expect(describeError(new Error('x'))).toBe('Something went wrong. Please try again.');
+    expect(describeError(serverFault)).toBe('Terjadi kesalahan. Silakan coba lagi.');
+    expect(describeError(new Error('x'))).toBe('Terjadi kesalahan. Silakan coba lagi.');
   });
 });

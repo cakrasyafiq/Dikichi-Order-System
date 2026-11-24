@@ -17,7 +17,7 @@ export function PageLayout({ hero, footerOutlet, children }: PageLayoutProps) {
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-30 focus:rounded-sm focus:bg-surface focus:px-4 focus:py-2 focus:font-bold focus:text-brand"
       >
-        Skip to main content
+        Lewati ke konten utama
       </a>
       <SiteHeader>{hero}</SiteHeader>
       <main

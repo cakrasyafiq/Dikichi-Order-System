@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 type RemoteImageProps = {
-  src: string;
+  src: string | null | undefined;
   alt: string;
   className?: string;
   eager?: boolean;
@@ -9,17 +9,20 @@ type RemoteImageProps = {
 
 export function RemoteImage({ src, alt, className = '', eager = false }: RemoteImageProps) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const resolvedSrc = src?.trim();
 
-  // WHY: stock photos come from a third party, so a failed load must degrade to an empty tile and not a broken icon.
-  if (failedSrc === src) return <div aria-hidden="true" className={`bg-tint ${className}`} />;
+  // WHY: missing or failed images must degrade to an empty tile and not a broken icon.
+  if (!resolvedSrc || failedSrc === resolvedSrc) {
+    return <div aria-hidden="true" className={`bg-tint ${className}`} />;
+  }
 
   return (
     <img
-      src={src}
+      src={resolvedSrc}
       alt={alt}
       loading={eager ? 'eager' : 'lazy'}
       decoding="async"
-      onError={() => setFailedSrc(src)}
+      onError={() => setFailedSrc(resolvedSrc)}
       className={className}
     />
   );

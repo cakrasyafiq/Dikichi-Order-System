@@ -9,13 +9,13 @@ export function CartLines({ cart }: { cart: CartApi }) {
     return (
       <div className="mb-5">
         <p className="m-0 mb-3 text-[13px] text-muted">
-          Your order is empty. Add dishes from the menu.
+          Pesanan Anda masih kosong. Tambahkan hidangan dari menu.
         </p>
         <a
           href="#menu-order"
           className="inline-block rounded-sm border-[1.5px] border-magenta bg-surface px-[14px] py-[7px] text-[12.5px] font-bold text-magenta no-underline transition-colors duration-fast hover:bg-tint"
         >
-          Browse the menu
+          Lihat menu
         </a>
       </div>
     );
@@ -36,12 +36,12 @@ export function CartLines({ cart }: { cart: CartApi }) {
               </span>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[12.5px] text-muted">{formatRupiah(line.unitPrice)} each</span>
+              <span className="text-[12.5px] text-muted">{formatRupiah(line.unitPrice)} / item</span>
               <div className="inline-flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => cart.decrement(line.menuItemId)}
-                  aria-label={line.quantity === 1 ? `Remove ${line.name}` : `Decrease ${line.name}`}
+                  aria-label={line.quantity === 1 ? `Hapus ${line.name}` : `Kurangi ${line.name}`}
                   className={STEPPER_CLASS}
                 >
                   -
@@ -53,7 +53,7 @@ export function CartLines({ cart }: { cart: CartApi }) {
                   type="button"
                   onClick={() => cart.increment(line.menuItemId)}
                   disabled={!cart.canAdd(line.menuItemId)}
-                  aria-label={`Increase ${line.name}`}
+                  aria-label={`Tambah ${line.name}`}
                   className={STEPPER_CLASS}
                 >
                   +

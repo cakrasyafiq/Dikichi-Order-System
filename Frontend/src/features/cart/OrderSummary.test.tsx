@@ -29,8 +29,10 @@ function Harness({ submit }: { submit: SubmissionApi['submit'] }) {
 describe('OrderSummary', () => {
   it('shows an empty state and blocks submitting an empty order', () => {
     render(<Harness submit={vi.fn()} />);
-    expect(screen.getByText('Your order is empty. Add dishes from the menu.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Place Order' })).toBeDisabled();
+    expect(
+      screen.getByText('Pesanan Anda masih kosong. Tambahkan hidangan dari menu.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kirim Pesanan' })).toBeDisabled();
   });
 
   it('shows line totals and submits the name with the chosen API version', () => {
@@ -38,12 +40,12 @@ describe('OrderSummary', () => {
     render(<Harness submit={submit} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'seed' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Increase Mie Suit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tambah Mie Suit' }));
     expect(screen.getAllByText('Rp50.000')).toHaveLength(2);
 
-    fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Budi' } });
+    fireEvent.change(screen.getByLabelText('Nama Anda'), { target: { value: 'Budi' } });
     fireEvent.click(screen.getByRole('button', { name: 'v2' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Place Order' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Kirim Pesanan' }));
 
     expect(submit).toHaveBeenCalledWith({ customerName: 'Budi', version: 'v2' });
   });
@@ -51,7 +53,9 @@ describe('OrderSummary', () => {
   it('removes a line when its quantity is decreased from one', () => {
     render(<Harness submit={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'seed' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Remove Mie Suit' }));
-    expect(screen.getByText('Your order is empty. Add dishes from the menu.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Hapus Mie Suit' }));
+    expect(
+      screen.getByText('Pesanan Anda masih kosong. Tambahkan hidangan dari menu.'),
+    ).toBeInTheDocument();
   });
 });

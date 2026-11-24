@@ -70,7 +70,7 @@ describe('LoginPage', () => {
     stubFetch(new Response('<html>Too Many Requests</html>', { status: 429 }));
     renderLogin();
     fillAndSubmit('cashier', 'secret');
-    expect(await screen.findByRole('alert')).toHaveTextContent('Too many attempts');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Terlalu banyak percobaan');
   });
 
   it('signs in, stores the session, and opens the dashboard of the role', async () => {

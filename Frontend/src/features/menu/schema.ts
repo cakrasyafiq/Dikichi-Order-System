@@ -7,6 +7,7 @@ export const menuItemSchema = z.object({
   description: z.string().nullish(),
   price: z.number().int(),
   category: z.string(),
+  imageUrl: z.string().nullish(),
   available: z.boolean(),
 });
 export const menuListSchema = z.array(menuItemSchema);

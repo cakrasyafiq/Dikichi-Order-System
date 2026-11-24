@@ -1,5 +1,4 @@
 import { RemoteImage } from '@/components/ui/RemoteImage';
-import { menuImageUrl } from '@/constants/images';
 import { formatRupiah } from '@/lib/format';
 import type { MenuItem } from './schema';
 
@@ -14,9 +13,9 @@ const BUTTON_BASE =
   'h-9 w-full rounded-sm border-[1.5px] text-[12.5px] font-bold transition-colors duration-fast';
 
 function buttonLabel(soldOut: boolean, limitReached: boolean, quantity: number): string {
-  if (soldOut) return 'Sold out';
-  if (limitReached) return 'Limit reached';
-  return quantity > 0 ? `Added (${quantity})` : 'Add';
+  if (soldOut) return 'Habis';
+  if (limitReached) return 'Batas tercapai';
+  return quantity > 0 ? `Ditambahkan (${quantity})` : 'Tambah';
 }
 
 function buttonTone(unavailable: boolean, quantity: number): string {
@@ -37,11 +36,7 @@ export function ProductCard({ item, quantity, canAdd, onAdd }: ProductCardProps)
           soldOut ? 'opacity-60 grayscale' : ''
         }`}
       >
-        <RemoteImage
-          src={menuImageUrl(item.category, item.id, 600)}
-          alt=""
-          className="h-full w-full object-cover"
-        />
+        <RemoteImage src={item.imageUrl} alt="" className="h-full w-full object-cover" />
       </div>
       <h3 className="m-0 mb-[6px] text-[13.5px] font-extrabold uppercase leading-[1.3] text-brand">
         {item.name}

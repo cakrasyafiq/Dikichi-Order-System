@@ -62,8 +62,8 @@ export function OrderPage() {
         <OrderConfirmation receipt={submission.receipt} onDismiss={submission.dismissReceipt} />
       ) : null}
       <div className="grid grid-cols-[1.55fr_1fr] items-stretch gap-section tablet:grid-cols-1">
-        <PromoCarousel />
-        <div className="flex flex-col gap-[14px]">
+        <PromoCarousel menu={menu} items={highlights} />
+        <div className="flex flex-col gap-[14px] tablet:order-first">
           <SelectedOutletCard
             outlets={selection.outletsQuery}
             selected={selection.outlet}

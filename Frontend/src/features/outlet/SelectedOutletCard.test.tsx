@@ -22,7 +22,7 @@ describe('SelectedOutletCard', () => {
     render(<SelectedOutletCard outlets={view({})} selected={outlet} onSelect={vi.fn()} />);
     expect(screen.getByText('Dikichi Outlet 01')).toBeInTheDocument();
     expect(screen.getByText('Jl. Contoh No. 1')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Change branch')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Pilih cabang')).not.toBeInTheDocument();
   });
 
   it('offers a branch picker when several outlets exist', () => {
@@ -35,7 +35,7 @@ describe('SelectedOutletCard', () => {
         onSelect={onSelect}
       />,
     );
-    fireEvent.change(screen.getByLabelText('Change branch'), { target: { value: 'OUT-02' } });
+    fireEvent.change(screen.getByLabelText('Pilih cabang'), { target: { value: 'OUT-02' } });
     expect(onSelect).toHaveBeenCalledWith('OUT-02');
   });
 
@@ -47,7 +47,7 @@ describe('SelectedOutletCard', () => {
         onSelect={vi.fn()}
       />,
     );
-    expect(screen.getByLabelText('Selected kitchen')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByLabelText('Outlet terpilih')).toHaveAttribute('aria-busy', 'true');
   });
 
   it('shows a readable error and retries on request', () => {
@@ -59,8 +59,8 @@ describe('SelectedOutletCard', () => {
         onSelect={vi.fn()}
       />,
     );
-    expect(screen.getByText('Kitchen details are unavailable')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(screen.getByText('Detail outlet tidak tersedia')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Coba lagi' }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
@@ -68,7 +68,7 @@ describe('SelectedOutletCard', () => {
     render(
       <SelectedOutletCard outlets={view({ data: [] })} selected={undefined} onSelect={vi.fn()} />,
     );
-    expect(screen.getByText('No kitchen is open yet')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    expect(screen.getByText('Belum ada outlet yang buka')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Muat ulang' })).toBeInTheDocument();
   });
 });

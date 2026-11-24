@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ChevronRightIcon } from '@/components/icons';
+import { PickerSelect } from '@/components/ui/PickerSelect';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StateMessage } from '@/components/ui/StateMessage';
 import { describeError } from '@/lib/api/describeError';
@@ -17,7 +17,7 @@ const CARD_CLASS =
 
 function CardFrame({ busy = false, children }: { busy?: boolean; children: ReactNode }) {
   return (
-    <section aria-label="Selected kitchen" aria-busy={busy} className={CARD_CLASS}>
+    <section aria-label="Outlet terpilih" aria-busy={busy} className={CARD_CLASS}>
       {children}
     </section>
   );
@@ -33,21 +33,18 @@ function BranchPicker({
   onSelect: (outletId: string) => void;
 }) {
   return (
-    <div className="relative h-[34px] w-[34px] shrink-0 rounded-sm border border-line bg-tint text-magenta focus-within:outline focus-within:outline-[3px] focus-within:outline-offset-2 focus-within:outline-magenta">
-      <ChevronRightIcon className="pointer-events-none absolute inset-0 m-auto h-[18px] w-[18px]" />
-      <select
-        aria-label="Change branch"
-        value={selectedId}
-        onChange={(event) => onSelect(event.target.value)}
-        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-      >
-        {outlets.map((outlet) => (
-          <option key={outlet.id} value={outlet.id}>
-            {outlet.name}
-          </option>
-        ))}
-      </select>
-    </div>
+    <PickerSelect
+      aria-label="Pilih cabang"
+      value={selectedId}
+      onChange={(event) => onSelect(event.target.value)}
+      className="max-w-[180px]"
+    >
+      {outlets.map((outlet) => (
+        <option key={outlet.id} value={outlet.id}>
+          {outlet.name}
+        </option>
+      ))}
+    </PickerSelect>
   );
 }
 
@@ -68,9 +65,9 @@ export function SelectedOutletCard({ outlets, selected, onSelect }: SelectedOutl
     return (
       <CardFrame>
         <StateMessage
-          title="Kitchen details are unavailable"
+          title="Detail outlet tidak tersedia"
           detail={describeError(outlets.error)}
-          actionLabel="Try again"
+          actionLabel="Coba lagi"
           onAction={() => void outlets.refetch()}
         />
       </CardFrame>
@@ -81,9 +78,9 @@ export function SelectedOutletCard({ outlets, selected, onSelect }: SelectedOutl
     return (
       <CardFrame>
         <StateMessage
-          title="No kitchen is open yet"
-          detail="Ask the staff to add one, then refresh."
-          actionLabel="Refresh"
+          title="Belum ada outlet yang buka"
+          detail="Minta staf untuk menambahkan outlet, lalu muat ulang."
+          actionLabel="Muat ulang"
           onAction={() => void outlets.refetch()}
         />
       </CardFrame>
@@ -93,9 +90,9 @@ export function SelectedOutletCard({ outlets, selected, onSelect }: SelectedOutl
   const choices = outlets.data ?? [];
   return (
     <CardFrame>
-      <div>
+      <div className="min-w-0">
         <span className="mb-1 inline-block text-[11px] font-bold uppercase tracking-[0.05em] text-magenta">
-          Selected Kitchen
+          Outlet Terpilih
         </span>
         <h2 className="m-0 mb-1 text-base font-extrabold text-brand">{selected.name}</h2>
         <p className="m-0 text-[13px] text-muted">{selected.address}</p>

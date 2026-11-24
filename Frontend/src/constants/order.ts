@@ -11,10 +11,10 @@ export type ApiVersion = (typeof API_VERSIONS)[number];
 export const DEFAULT_API_VERSION: ApiVersion = 'v1';
 
 export const ORDER_STATUS_LABELS: Readonly<Record<string, string>> = {
-  PENDING: 'Waiting for the cashier',
-  ACCEPTED: 'Accepted, waiting for payment',
-  PREPARING: 'Being prepared',
-  READY: 'Ready',
-  COMPLETED: 'Completed',
-  CANCELLED: 'Cancelled',
+  PENDING: 'Menunggu konfirmasi kasir',
+  ACCEPTED: 'Diterima, menunggu pembayaran',
+  PREPARING: 'Sedang disiapkan',
+  READY: 'Siap disajikan',
+  COMPLETED: 'Selesai',
+  CANCELLED: 'Dibatalkan',
 };

@@ -29,7 +29,7 @@ export function OrderSummary({ cart, tableCode, submission }: OrderSummaryProps)
         id="order-summary-heading"
         className="m-0 mb-5 inline-block rounded-[10px] bg-magenta px-[18px] py-2 font-display text-[15px] font-extrabold text-surface"
       >
-        Your Order
+        Pesanan Anda
       </h2>
       <CartLines cart={cart} />
       <form
@@ -44,7 +44,7 @@ export function OrderSummary({ cart, tableCode, submission }: OrderSummaryProps)
             htmlFor="customer-name"
             className="mb-1 block text-[13.5px] font-semibold text-muted"
           >
-            Your name
+            Nama Anda
           </label>
           <input
             id="customer-name"
@@ -68,7 +68,7 @@ export function OrderSummary({ cart, tableCode, submission }: OrderSummaryProps)
           ) : null}
         </div>
         <p className="m-0 mb-4 text-[13.5px] font-semibold text-muted">
-          Table: <span className="font-bold text-brand">{tableCode ?? 'not selected'}</span>
+          Meja: <span className="font-bold text-brand">{tableCode ?? 'belum dipilih'}</span>
           {errors.tableCode ? (
             <span className={`${FIELD_ERROR_CLASS} block`}>{errors.tableCode}</span>
           ) : null}
@@ -93,7 +93,7 @@ export function OrderSummary({ cart, tableCode, submission }: OrderSummaryProps)
           aria-busy={isPending}
           className="w-full rounded-full bg-magenta px-5 py-3 text-xs font-extrabold uppercase tracking-[0.03em] text-surface transition-colors duration-fast hover:bg-magenta-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isPending ? 'Sending...' : 'Place Order'}
+          {isPending ? 'Mengirim...' : 'Kirim Pesanan'}
         </button>
       </form>
     </section>

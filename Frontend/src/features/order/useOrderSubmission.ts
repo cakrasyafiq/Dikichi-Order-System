@@ -41,12 +41,14 @@ export function useOrderSubmission({ outletId, tableCode, cart, refetchMenu }: P
     const menu = await refetchMenu();
     const gone = menu ? findUnavailableLines(cart.lines, menu) : [];
     if (gone.length === 0) {
-      setFormError('Some dishes are no longer available. Please refresh the page and try again.');
+      setFormError(
+        'Beberapa hidangan sudah tidak tersedia. Silakan muat ulang halaman dan coba lagi.',
+      );
       return;
     }
     cart.removeMany(gone.map((line) => line.menuItemId));
     setNotice(
-      `Removed sold-out dishes: ${gone.map((line) => line.name).join(', ')}. Please review your order.`,
+      `Hidangan yang habis telah dihapus: ${gone.map((line) => line.name).join(', ')}. Silakan periksa kembali pesanan Anda.`,
     );
   }
 

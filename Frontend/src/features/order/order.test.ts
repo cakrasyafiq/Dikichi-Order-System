@@ -29,9 +29,9 @@ describe('validateOrderDraft', () => {
     expect(result).toEqual({
       ok: false,
       errors: {
-        customerName: 'Please enter your name',
-        tableCode: 'Please choose your table',
-        items: 'Add at least one dish to your order',
+        customerName: 'Silakan masukkan nama Anda',
+        tableCode: 'Silakan pilih meja Anda',
+        items: 'Tambahkan minimal satu hidangan ke pesanan Anda',
       },
     });
   });

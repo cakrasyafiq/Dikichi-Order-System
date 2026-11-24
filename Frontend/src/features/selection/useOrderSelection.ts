@@ -19,7 +19,7 @@ function resolveTable(
   }
   if (tables.some((table) => table.code === requested))
     return { tableCode: requested, notice: null };
-  return { tableCode: null, notice: `Table ${requested} was not found. Please choose your table.` };
+  return { tableCode: null, notice: `Meja ${requested} tidak ditemukan. Silakan pilih meja Anda.` };
 }
 
 export function useOrderSelection() {

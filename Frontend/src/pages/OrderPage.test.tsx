@@ -14,6 +14,7 @@ const MENU = [
     description: null,
     price: 25000,
     category: 'Mie',
+    imageUrl: '/api/v1/menu-images/menu_1.png',
     available: true,
   },
   {
@@ -23,6 +24,7 @@ const MENU = [
     description: null,
     price: 12000,
     category: 'Dimsum',
+    imageUrl: null,
     available: false,
   },
 ];
@@ -76,11 +78,14 @@ describe('OrderPage', () => {
     const fetchMock = stubApi();
     renderPage('/order?outlet=OUT-01&table=T-05');
 
-    const add = await screen.findByRole('button', { name: 'Add, Mie Suit' });
+    const add = await screen.findByRole('button', { name: 'Tambah, Mie Suit' });
+    const menuImages = document.querySelectorAll('img[src="/api/v1/menu-images/menu_1.png"]');
+    expect(menuImages.length).toBeGreaterThanOrEqual(1);
+
     fireEvent.click(add);
     fireEvent.click(add);
-    fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Budi' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Place Order' }));
+    fireEvent.change(screen.getByLabelText('Nama Anda'), { target: { value: 'Budi' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Kirim Pesanan' }));
 
     expect(await screen.findByText('ORD-0042')).toBeInTheDocument();
     expect(screen.getByText('API v1')).toBeInTheDocument();
@@ -100,13 +105,13 @@ describe('OrderPage', () => {
     renderPage('/order');
 
     fireEvent.click(await screen.findByRole('button', { name: 'Dimsum' }));
-    expect(screen.getByRole('button', { name: 'Sold out, Lumpia' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Habis, Lumpia' })).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Mie' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Add, Mie Suit' }));
-    fireEvent.change(screen.getByLabelText('Your name'), { target: { value: 'Budi' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Place Order' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tambah, Mie Suit' }));
+    fireEvent.change(screen.getByLabelText('Nama Anda'), { target: { value: 'Budi' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Kirim Pesanan' }));
 
-    expect(await screen.findByText('Please choose your table')).toBeInTheDocument();
+    expect(await screen.findByText('Silakan pilih meja Anda')).toBeInTheDocument();
   });
 });

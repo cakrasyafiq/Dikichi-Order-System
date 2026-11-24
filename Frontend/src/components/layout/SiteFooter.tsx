@@ -21,7 +21,7 @@ export function SiteFooter({ outlet }: { outlet?: Outlet | undefined }) {
           )}
         </div>
         <p className="m-0 pt-4 text-[11.5px] text-inverse">
-          Copyright {new Date().getFullYear()}, All Rights Reserved by {BRAND.name}
+          Hak Cipta &copy; {new Date().getFullYear()} {BRAND.name}. Seluruh hak dilindungi.
         </p>
       </div>
     </footer>

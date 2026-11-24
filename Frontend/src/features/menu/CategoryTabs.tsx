@@ -6,7 +6,7 @@ type CategoryTabsProps = {
 
 export function CategoryTabs({ categories, active, onSelect }: CategoryTabsProps) {
   return (
-    <div role="group" aria-label="Menu categories" className="flex items-center gap-6">
+    <div role="group" aria-label="Kategori menu" className="flex items-center gap-6">
       {categories.map((name) => {
         const isActive = name === active;
         return (
