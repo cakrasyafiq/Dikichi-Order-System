@@ -115,7 +115,7 @@ export function ManagementTab({
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
           <div>
             <span className="mb-2 inline-block rounded-[10px] bg-magenta px-[18px] py-2 font-display text-[15px] font-extrabold text-surface">
-              4. Management — Meja &amp; Kursi
+              Management — Meja &amp; Kursi
             </span>
             <h2
               id="table-management-heading"
@@ -196,7 +196,7 @@ export function ManagementTab({
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
           <div>
             <span className="mb-2 inline-block rounded-[10px] bg-magenta px-[18px] py-2 font-display text-[15px] font-extrabold text-surface">
-              4. Management — Stok Menu
+              Management — Stok Menu
             </span>
             <h2
               id="stock-management-heading"

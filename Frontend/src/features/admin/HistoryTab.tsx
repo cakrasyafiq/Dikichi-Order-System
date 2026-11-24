@@ -41,7 +41,7 @@ export function HistoryTab({ orders }: HistoryTabProps) {
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-line pb-4">
         <div>
           <span className="mb-2 inline-block rounded-[10px] bg-magenta px-[18px] py-2 font-display text-[15px] font-extrabold text-surface">
-            3. History (Riwayat Pesanan)
+            History (Riwayat Pesanan)
           </span>
           <h2 id="history-tab-heading" className="m-0 font-display text-xl font-extrabold text-brand">
             Daftar Pesanan Selesai (Completed)
@@ -97,53 +97,76 @@ export function HistoryTab({ orders }: HistoryTabProps) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 tablet:grid-cols-1">
-          {filtered.map((order) => (
-            <article
-              key={order.id}
-              className="rounded-md border border-line bg-surface p-5 shadow-card"
-            >
-              <div className="mb-3 flex items-start justify-between gap-2">
-                <div>
-                  <span className="inline-block rounded-sm bg-tint px-2.5 py-1 text-xs font-extrabold text-magenta">
-                    Meja {order.tableCode}
-                  </span>
-                  <h3 className="m-0 mt-1 font-display text-lg font-extrabold text-brand">
-                    {order.orderNumber} — {order.customerName}
-                  </h3>
-                </div>
-                <div className="text-right">
-                  <span className="inline-block rounded-full bg-brand px-3 py-1 text-[11px] font-extrabold uppercase text-surface">
-                    Completed
-                  </span>
-                  <p className="m-0 mt-1 text-xs text-muted">
-                    Selesai {formatClock(Date.parse(order.updatedAt))}
-                  </p>
-                </div>
-              </div>
-
-              <ul className="m-0 mb-3 grid list-none gap-1.5 border-t border-line p-0 pt-3">
-                {order.items.map((item) => (
-                  <li
-                    key={item.menuItemId}
-                    className="flex items-baseline justify-between gap-2 text-[13.5px]"
-                  >
-                    <span className="font-semibold text-brand">
-                      {item.quantity}x {item.name}
+        <div className="overflow-x-auto rounded-md border border-line">
+          <table className="w-full border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-line bg-tint text-xs font-extrabold uppercase tracking-[0.04em] text-brand">
+                <th scope="col" className="px-4 py-3">
+                  No. Order
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Meja
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Pelanggan
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Detail Menu
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Waktu Selesai
+                </th>
+                <th scope="col" className="px-4 py-3">
+                  Status
+                </th>
+                <th scope="col" className="px-4 py-3 text-right">
+                  Total
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line bg-surface">
+              {filtered.map((order) => (
+                <tr key={order.id} className="transition-colors duration-fast hover:bg-canvas/70">
+                  <td className="whitespace-nowrap px-4 py-3 font-display font-extrabold text-brand">
+                    {order.orderNumber}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <span className="inline-block rounded-sm bg-tint px-2 py-0.5 text-xs font-extrabold text-magenta">
+                      {order.tableCode}
                     </span>
-                    <span className="font-bold text-brand">{formatRupiah(item.subtotal)}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="flex items-baseline justify-between border-t border-line pt-3">
-                <span className="text-sm font-extrabold text-brand">Total</span>
-                <span className="font-display text-lg font-extrabold text-brand">
-                  {formatRupiah(order.totalAmount)}
-                </span>
-              </div>
-            </article>
-          ))}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 font-semibold text-brand">
+                    {order.customerName}
+                  </td>
+                  <td className="px-4 py-3">
+                    <ul className="m-0 grid list-none gap-0.5 p-0 text-[13px]">
+                      {order.items.map((item) => (
+                        <li key={item.menuItemId} className="text-brand">
+                          <span className="font-semibold">
+                            {item.quantity}x {item.name}
+                          </span>{' '}
+                          <span className="text-xs text-muted">
+                            ({formatRupiah(item.subtotal)})
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-xs font-medium text-muted">
+                    {formatClock(Date.parse(order.updatedAt))}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <span className="inline-block rounded-full bg-brand px-2.5 py-0.5 text-[11px] font-extrabold uppercase text-surface">
+                      Completed
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-right font-display font-extrabold text-brand">
+                    {formatRupiah(order.totalAmount)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </section>

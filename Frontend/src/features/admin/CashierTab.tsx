@@ -272,6 +272,7 @@ export function CashierTab({
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const pendingOrders = orders.filter((order) => order.status === 'PENDING');
+  const unavailableMenu = menu.filter((item) => !item.available);
 
   async function handleStatusAction(
     order: V1Order,
@@ -287,170 +288,221 @@ export function CashierTab({
   }
 
   return (
-    <section
-      aria-labelledby="cashier-tab-heading"
-      className="rounded-lg border border-line bg-surface p-6 shadow-card"
-    >
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
-        <div>
-          <span className="mb-2 inline-block rounded-[10px] bg-magenta px-[18px] py-2 font-display text-[15px] font-extrabold text-surface">
-            1. Cashier (Kasir)
+    <div className="grid grid-cols-[270px_minmax(0,1fr)] items-start gap-5 tablet:grid-cols-1">
+      {/* Left Screen: Unavailable Menu List */}
+      <aside
+        aria-labelledby="unavailable-menu-heading"
+        className="rounded-lg border border-line bg-surface p-5 shadow-card"
+      >
+        <div className="mb-3 flex items-center justify-between gap-2 border-b border-line pb-3">
+          <div>
+            <h2
+              id="unavailable-menu-heading"
+              className="m-0 font-display text-base font-extrabold text-brand"
+            >
+              Menu Tidak Tersedia
+            </h2>
+            <p className="m-0 mt-0.5 text-xs text-muted">Stok habis saat ini</p>
+          </div>
+          <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-line bg-tint px-2 text-xs font-extrabold text-magenta">
+            {unavailableMenu.length}
           </span>
-          <h2 id="cashier-tab-heading" className="m-0 font-display text-xl font-extrabold text-brand">
-            Daftar Pesanan Masuk (Pending)
-          </h2>
-          <p className="m-0 mt-1 text-[13px] text-muted">
-            Periksa atau edit isi pesanan sebelum pembayaran, terima pembayaran untuk mengubah status
-            menjadi Accepted, atau batalkan pesanan.
-          </p>
         </div>
-        <span className="rounded-full border border-line bg-tint px-4 py-1.5 text-xs font-extrabold text-magenta">
-          {pendingOrders.length} Pesanan Pending
-        </span>
-      </div>
 
-      {feedback ? (
-        <p
-          role="alert"
-          className="m-0 mb-4 rounded-sm border border-magenta bg-tint p-3 text-xs font-bold text-brand"
-        >
-          {feedback}
-        </p>
-      ) : null}
-
-      {pendingOrders.length === 0 ? (
-        <div className="rounded-md border border-dashed border-line bg-canvas p-8 text-center">
-          <p className="m-0 text-base font-extrabold text-brand">
-            Belum ada pesanan berstatus Pending
-          </p>
-          <p className="m-0 mt-1 text-[13px] text-muted">
-            Pesanan baru dari pelanggan akan otomatis muncul di daftar ini untuk dikonfirmasi kasir.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-4 tablet:grid-cols-1">
-          {pendingOrders.map((order) => {
-            const isEditing = editingOrderId === order.id;
-            const method = paymentMethods[order.id] ?? 'CASH';
-
-            return (
-              <article
-                key={order.id}
-                className="flex flex-col justify-between rounded-md border border-line bg-surface p-5 shadow-card"
+        {unavailableMenu.length === 0 ? (
+          <div className="rounded-sm border border-dashed border-line bg-canvas p-4 text-center">
+            <p className="m-0 text-xs font-semibold text-muted">
+              Semua menu sedang tersedia.
+            </p>
+          </div>
+        ) : (
+          <ul className="m-0 grid list-none gap-2 p-0">
+            {unavailableMenu.map((item) => (
+              <li
+                key={item.id}
+                className="flex items-start justify-between gap-2 rounded-sm border border-line bg-canvas px-3 py-2.5"
               >
-                <div>
-                  <div className="mb-3 flex items-start justify-between gap-2">
-                    <div>
-                      <span className="inline-block rounded-sm bg-tint px-2.5 py-1 text-xs font-extrabold text-magenta">
-                        Meja {order.tableCode}
-                      </span>
-                      <h3 className="m-0 mt-1 font-display text-lg font-extrabold text-brand">
-                        {order.orderNumber} — {order.customerName}
-                      </h3>
-                    </div>
-                    <div className="text-right">
-                      <span className="inline-block rounded-full border border-magenta bg-tint px-3 py-1 text-[11px] font-extrabold uppercase text-magenta">
-                        Pending
-                      </span>
-                      <p className="m-0 mt-1 text-xs text-muted">
-                        {formatClock(Date.parse(order.createdAt))}
-                      </p>
-                    </div>
-                  </div>
-
-                  <ul className="m-0 mb-3 grid list-none gap-1.5 border-t border-line p-0 pt-3">
-                    {order.items.map((item) => (
-                      <li
-                        key={item.menuItemId}
-                        className="flex items-baseline justify-between gap-2 text-[13.5px]"
-                      >
-                        <span className="font-semibold text-brand">
-                          {item.quantity}x {item.name}
-                        </span>
-                        <span className="font-bold text-brand">{formatRupiah(item.subtotal)}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="mb-4 flex items-baseline justify-between border-t border-line pt-3">
-                    <span className="text-sm font-extrabold text-brand">Total Pembayaran</span>
-                    <span className="font-display text-lg font-extrabold text-brand">
-                      {formatRupiah(order.totalAmount)}
-                    </span>
-                  </div>
+                <div className="min-w-0">
+                  <p className="m-0 truncate text-xs font-extrabold text-brand">{item.name}</p>
+                  <p className="m-0 mt-0.5 text-[11px] font-semibold uppercase text-muted">
+                    {item.category} &bull; {formatRupiah(item.price)}
+                  </p>
                 </div>
+                <span className="shrink-0 rounded-full border border-line bg-surface px-2 py-0.5 text-[10px] font-extrabold uppercase text-muted">
+                  Habis
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </aside>
 
-                {isEditing ? (
-                  <OrderEditor
-                    order={order}
-                    tables={tables}
-                    menu={menu}
-                    isBusy={isBusy}
-                    onSave={async (draft) => {
-                      await onSaveEdit(order, draft);
-                      setEditingOrderId(null);
-                    }}
-                    onCancel={() => setEditingOrderId(null)}
-                  />
-                ) : (
-                  <div className="space-y-3 border-t border-line pt-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <label
-                        htmlFor={`pay-method-${order.id}`}
-                        className="text-xs font-bold text-muted"
-                      >
-                        Metode Pembayaran
-                      </label>
-                      <PickerSelect
-                        id={`pay-method-${order.id}`}
-                        aria-label={`Metode pembayaran ${order.orderNumber}`}
-                        value={method}
-                        onChange={(event) =>
-                          setPaymentMethods((prev) => ({
-                            ...prev,
-                            [order.id]: event.target.value as PaymentMethodChoice,
-                          }))
-                        }
-                      >
-                        <option value="CASH">Tunai (Cash)</option>
-                        <option value="QRIS">QRIS</option>
-                        <option value="CARD">Kartu (Card)</option>
-                      </PickerSelect>
+      {/* Main Cashier Pending Orders */}
+      <section
+        aria-labelledby="cashier-tab-heading"
+        className="rounded-lg border border-line bg-surface p-6 shadow-card"
+      >
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+          <div>
+            <span className="mb-2 inline-block rounded-[10px] bg-magenta px-[18px] py-2 font-display text-[15px] font-extrabold text-surface">
+              Cashier (Kasir)
+            </span>
+            <h2 id="cashier-tab-heading" className="m-0 font-display text-xl font-extrabold text-brand">
+              Daftar Pesanan Masuk (Pending)
+            </h2>
+            <p className="m-0 mt-1 text-[13px] text-muted">
+              Periksa atau edit isi pesanan sebelum pembayaran, terima pembayaran untuk mengubah status
+              menjadi Accepted, atau batalkan pesanan.
+            </p>
+          </div>
+          <span className="rounded-full border border-line bg-tint px-4 py-1.5 text-xs font-extrabold text-magenta">
+            {pendingOrders.length} Pesanan Pending
+          </span>
+        </div>
+
+        {feedback ? (
+          <p
+            role="alert"
+            className="m-0 mb-4 rounded-sm border border-magenta bg-tint p-3 text-xs font-bold text-brand"
+          >
+            {feedback}
+          </p>
+        ) : null}
+
+        {pendingOrders.length === 0 ? (
+          <div className="rounded-md border border-dashed border-line bg-canvas p-8 text-center">
+            <p className="m-0 text-base font-extrabold text-brand">
+              Belum ada pesanan berstatus Pending
+            </p>
+            <p className="m-0 mt-1 text-[13px] text-muted">
+              Pesanan baru dari pelanggan akan otomatis muncul di daftar ini untuk dikonfirmasi kasir.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
+            {pendingOrders.map((order) => {
+              const isEditing = editingOrderId === order.id;
+              const method = paymentMethods[order.id] ?? 'CASH';
+
+              return (
+                <article
+                  key={order.id}
+                  className="flex flex-col justify-between rounded-md border border-line bg-surface p-5 shadow-card"
+                >
+                  <div>
+                    <div className="mb-3 flex items-start justify-between gap-2">
+                      <div>
+                        <span className="inline-block rounded-sm bg-tint px-2.5 py-1 text-xs font-extrabold text-magenta">
+                          Meja {order.tableCode}
+                        </span>
+                        <h3 className="m-0 mt-1 font-display text-lg font-extrabold text-brand">
+                          {order.orderNumber} — {order.customerName}
+                        </h3>
+                      </div>
+                      <div className="text-right">
+                        <span className="inline-block rounded-full border border-magenta bg-tint px-3 py-1 text-[11px] font-extrabold uppercase text-magenta">
+                          Pending
+                        </span>
+                        <p className="m-0 mt-1 text-xs text-muted">
+                          {formatClock(Date.parse(order.createdAt))}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => void handleStatusAction(order, 'ACCEPTED', method)}
-                        className={`${BUTTON_PRIMARY} flex-1`}
-                      >
-                        Accept (Terima Pembayaran)
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => setEditingOrderId(order.id)}
-                        className={BUTTON_SECONDARY}
-                      >
-                        Edit Order
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => void handleStatusAction(order, 'CANCELLED')}
-                        className="rounded-sm border-[1.5px] border-line bg-canvas px-3 py-[7px] text-[12.5px] font-bold text-muted transition-colors duration-fast hover:border-magenta hover:text-magenta disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        Cancel
-                      </button>
+                    <ul className="m-0 mb-3 grid list-none gap-1.5 border-t border-line p-0 pt-3">
+                      {order.items.map((item) => (
+                        <li
+                          key={item.menuItemId}
+                          className="flex items-baseline justify-between gap-2 text-[13.5px]"
+                        >
+                          <span className="font-semibold text-brand">
+                            {item.quantity}x {item.name}
+                          </span>
+                          <span className="font-bold text-brand">{formatRupiah(item.subtotal)}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <div className="mb-4 flex items-baseline justify-between border-t border-line pt-3">
+                      <span className="text-sm font-extrabold text-brand">Total Pembayaran</span>
+                      <span className="font-display text-lg font-extrabold text-brand">
+                        {formatRupiah(order.totalAmount)}
+                      </span>
                     </div>
                   </div>
-                )}
-              </article>
-            );
-          })}
-        </div>
-      )}
-    </section>
+
+                  {isEditing ? (
+                    <OrderEditor
+                      order={order}
+                      tables={tables}
+                      menu={menu}
+                      isBusy={isBusy}
+                      onSave={async (draft) => {
+                        await onSaveEdit(order, draft);
+                        setEditingOrderId(null);
+                      }}
+                      onCancel={() => setEditingOrderId(null)}
+                    />
+                  ) : (
+                    <div className="space-y-3 border-t border-line pt-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <label
+                          htmlFor={`pay-method-${order.id}`}
+                          className="text-xs font-bold text-muted"
+                        >
+                          Metode Pembayaran
+                        </label>
+                        <PickerSelect
+                          id={`pay-method-${order.id}`}
+                          aria-label={`Metode pembayaran ${order.orderNumber}`}
+                          value={method}
+                          onChange={(event) =>
+                            setPaymentMethods((prev) => ({
+                              ...prev,
+                              [order.id]: event.target.value as PaymentMethodChoice,
+                            }))
+                          }
+                        >
+                          <option value="CASH">Tunai (Cash)</option>
+                          <option value="QRIS">QRIS</option>
+                          <option value="CARD">Kartu (Card)</option>
+                        </PickerSelect>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() => void handleStatusAction(order, 'ACCEPTED', method)}
+                          className={`${BUTTON_PRIMARY} flex-1`}
+                        >
+                          Accept (Terima Pembayaran)
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() => setEditingOrderId(order.id)}
+                          className={BUTTON_SECONDARY}
+                        >
+                          Edit Order
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() => void handleStatusAction(order, 'CANCELLED')}
+                          className="rounded-sm border-[1.5px] border-line bg-canvas px-3 py-[7px] text-[12.5px] font-bold text-muted transition-colors duration-fast hover:border-magenta hover:text-magenta disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

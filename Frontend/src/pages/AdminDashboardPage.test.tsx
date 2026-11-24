@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearCachedOrders } from '@/features/admin/orderStore';
@@ -22,6 +22,16 @@ const INITIAL_MENU = [
     category: 'makanan',
     imageUrl: '/api/v1/menu-images/menu_1.png',
     available: true,
+  },
+  {
+    id: 'm2',
+    outletId: 'OUT-01',
+    name: 'Es Teh Manis',
+    description: 'Teh manis dingin',
+    price: 5000,
+    category: 'minuman',
+    imageUrl: '/api/v1/menu-images/menu_2.png',
+    available: false,
   },
 ];
 
@@ -138,7 +148,7 @@ function stubBackend() {
 
     if (method === 'PATCH' && url === '/api/v1/menu-items/m1/availability') {
       const updated = { ...menu[0]!, available: Boolean(body.available) };
-      menu = [updated];
+      menu = menu.map((item) => (item.id === 'm1' ? updated : item));
       return new Response(JSON.stringify(updated));
     }
 
@@ -176,12 +186,22 @@ afterEach(() => {
 });
 
 describe('AdminDashboardPage', () => {
-  it('supports Cashier edit/accept/cancel, Kitchen 3-column flow to Done, and History', async () => {
+  it('supports Cashier edit/accept/cancel, unavailable menu list, Kitchen 3-column flow with color codes, and tabular History', async () => {
     stubBackend();
     renderDashboard();
 
-    // 1. Cashier tab: edit ORD-0042, accept it, and cancel ORD-0043
-    expect(screen.getByLabelText('Sidebar dasbor admin')).toBeInTheDocument();
+    // 1. Cashier tab: navbar has no numbering, unavailable menu list is shown on the left
+    const sidebar = screen.getByLabelText('Sidebar dasbor admin');
+    expect(sidebar).toBeInTheDocument();
+    expect(within(sidebar).queryByText(/1\. Cashier/)).not.toBeInTheDocument();
+    expect(within(sidebar).getByRole('button', { name: /Cashier/ })).toBeInTheDocument();
+
+    const unavailablePanel = await screen.findByRole('complementary', {
+      name: 'Menu Tidak Tersedia',
+    });
+    expect(await within(unavailablePanel).findByText('Es Teh Manis')).toBeInTheDocument();
+    expect(within(unavailablePanel).queryByText('Crispy Chicken Ori Besar')).not.toBeInTheDocument();
+
     expect(screen.getByLabelText('Layar konten dasbor admin')).toBeInTheDocument();
     expect(await screen.findByText(/ORD-0042 — Budi/)).toBeInTheDocument();
     expect(screen.getByText(/ORD-0043 — Siti/)).toBeInTheDocument();
@@ -208,20 +228,23 @@ describe('AdminDashboardPage', () => {
       await screen.findByText('Belum ada pesanan berstatus Pending'),
     ).toBeInTheDocument();
 
-    // 2. Switch to Orders (Kitchen 3-column queue: Accepted -> Preparing -> Ready -> Done)
-    fireEvent.click(screen.getByRole('button', { name: /2\. Orders/ }));
+    // 2. Switch to Orders (Kitchen 3-column queue with Blue/Yellow/Green color coding)
+    fireEvent.click(within(sidebar).getByRole('button', { name: /Orders/ }));
 
     const acceptedCol = screen.getByLabelText('Kolom Accepted');
+    const preparingCol = screen.getByLabelText('Kolom Preparing');
+    const readyCol = screen.getByLabelText('Kolom Ready');
+    expect(acceptedCol.className).toContain('bg-blue-50/70');
+    expect(preparingCol.className).toContain('bg-yellow-50/80');
+    expect(readyCol.className).toContain('bg-green-50/70');
     expect(within(acceptedCol).getByText('ORD-0042')).toBeInTheDocument();
 
     fireEvent.click(
       screen.getByRole('button', { name: /Geser ke Preparing .* ORD-0042/ }),
     );
-    const preparingCol = screen.getByLabelText('Kolom Preparing');
     expect(await within(preparingCol).findByText('ORD-0042')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Geser ke Ready .* ORD-0042/ }));
-    const readyCol = screen.getByLabelText('Kolom Ready');
     expect(await within(readyCol).findByText('ORD-0042')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Done (Selesai) ORD-0042' }));
@@ -229,10 +252,13 @@ describe('AdminDashboardPage', () => {
       await within(readyCol).findByText('Belum ada pesanan di kolom Ready'),
     ).toBeInTheDocument();
 
-    // 3. Switch to History tab: verify ORD-0042 is now in Completed history
-    fireEvent.click(screen.getByRole('button', { name: /3\. History/ }));
-    expect(await screen.findByText(/ORD-0042 — Budi Santoso/)).toBeInTheDocument();
-    expect(screen.getByText('Completed')).toBeInTheDocument();
+    // 3. Switch to History tab: verify ORD-0042 is rendered inside a table
+    fireEvent.click(within(sidebar).getByRole('button', { name: /History/ }));
+    const historyTable = await screen.findByRole('table');
+    expect(within(historyTable).getByText('ORD-0042')).toBeInTheDocument();
+    expect(within(historyTable).getByText('Budi Santoso')).toBeInTheDocument();
+    expect(within(historyTable).getByText('Completed')).toBeInTheDocument();
+    expect(within(historyTable).getByText('Rp30.000')).toBeInTheDocument();
   });
 
   it('lets staff add a new seat/table and update menu stock in Management tab', async () => {
@@ -240,7 +266,8 @@ describe('AdminDashboardPage', () => {
     renderDashboard();
 
     await screen.findByText(/ORD-0042 — Budi/);
-    fireEvent.click(screen.getByRole('button', { name: /4\. Management/ }));
+    const sidebar = screen.getByLabelText('Sidebar dasbor admin');
+    fireEvent.click(within(sidebar).getByRole('button', { name: /Management/ }));
 
     // Add a new table T-06
     fireEvent.click(screen.getByRole('button', { name: '+ Tambah Kursi / Meja' }));
@@ -250,7 +277,9 @@ describe('AdminDashboardPage', () => {
     // Update menu stock availability
     expect(screen.getByText('Stok Tersedia')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Ubah stok Crispy Chicken Ori Besar' }));
-    expect(await screen.findByText('Stok Habis')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getAllByText('Stok Habis')).toHaveLength(2);
+    });
   });
 
   it('locks the dashboard to the logged-in outlet and does not allow switching to other outlets', async () => {

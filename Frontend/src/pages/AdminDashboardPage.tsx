@@ -58,31 +58,31 @@ export function AdminDashboardPage({ initialTab = 'cashier' }: { initialTab?: Ad
   }[] = [
     {
       id: 'cashier',
-      label: '1. Cashier',
+      label: 'Cashier',
       subtitle: 'Konfirmasi & Pembayaran',
       badge: String(pendingCount),
-      icon: <CardIcon className="h-5 w-5 shrink-0" />,
+      icon: <CardIcon className="h-4 w-4 shrink-0" />,
     },
     {
       id: 'orders',
-      label: '2. Orders',
+      label: 'Orders',
       subtitle: 'Antrean Dapur (3 Kolom)',
       badge: String(activeQueueCount),
-      icon: <DineInIcon className="h-5 w-5 shrink-0" />,
+      icon: <DineInIcon className="h-4 w-4 shrink-0" />,
     },
     {
       id: 'history',
-      label: '3. History',
+      label: 'History',
       subtitle: 'Pesanan Selesai',
       badge: String(completedCount),
-      icon: <ClockIcon className="h-5 w-5 shrink-0" />,
+      icon: <ClockIcon className="h-4 w-4 shrink-0" />,
     },
     {
       id: 'management',
-      label: '4. Management',
+      label: 'Management',
       subtitle: 'Meja & Stok Menu',
       badge: `${tables.length} / ${menu.length}`,
-      icon: <GridIcon className="h-5 w-5 shrink-0" />,
+      icon: <GridIcon className="h-4 w-4 shrink-0" />,
     },
   ];
 
@@ -100,10 +100,10 @@ export function AdminDashboardPage({ initialTab = 'cashier' }: { initialTab?: Ad
       {/* Left Sidebar Navbar */}
       <aside
         aria-label="Sidebar dasbor admin"
-        className="flex w-[280px] shrink-0 flex-col justify-between border-r-4 border-magenta bg-brand p-5 text-surface tablet:w-full tablet:border-b-4 tablet:border-r-0"
+        className="flex w-[240px] shrink-0 flex-col justify-between border-r-4 border-magenta bg-brand px-4 py-5 text-surface tablet:w-full tablet:border-b-4 tablet:border-r-0"
       >
         <div>
-          <div className="mb-5 border-b border-inverse pb-4">
+          <div className="mb-5 border-b border-inverse/30 pb-4">
             <Link
               to={ROUTES.home}
               aria-label={BRAND.homeLabel}
@@ -111,33 +111,19 @@ export function AdminDashboardPage({ initialTab = 'cashier' }: { initialTab?: Ad
             >
               <BrandLockup />
             </Link>
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <span className="inline-block rounded-full bg-magenta px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-surface">
-                Admin Dashboard
-              </span>
-            </div>
+            <p className="m-0 mt-2 text-xs font-bold uppercase tracking-[0.06em] text-magenta">
+              Admin Dashboard
+            </p>
+            <p className="m-0 mt-1 text-xs font-medium text-surface/80">
+              {dashboard.outlet ? dashboard.outlet.name : user.outletId}
+            </p>
           </div>
 
-          {/* Active Outlet Info (Locked to logged-in outletId) */}
-          <div className="mb-5 rounded-md border border-inverse bg-[#4c1d95] p-3">
-            <span className="mb-1 block text-[10.5px] font-bold uppercase tracking-[0.05em] text-inverse">
-              Outlet Aktif
-            </span>
-            {dashboard.outlet ? (
-              <div>
-                <p className="m-0 text-sm font-extrabold text-surface">{dashboard.outlet.name}</p>
-                <p className="m-0 text-xs text-inverse">{dashboard.outlet.id}</p>
-              </div>
-            ) : (
-              <div>
-                <p className="m-0 text-sm font-extrabold text-surface">{user.outletId}</p>
-                <p className="m-0 text-xs text-inverse">Memuat detail outlet...</p>
-              </div>
-            )}
-          </div>
-
-          {/* Navigation Buttons */}
-          <nav aria-label="Menu navigasi dasbor admin" className="grid gap-2.5 tablet:grid-cols-2 mobile:grid-cols-1">
+          {/* Navigation Links */}
+          <nav
+            aria-label="Menu navigasi dasbor admin"
+            className="flex flex-col gap-1 tablet:flex-row tablet:flex-wrap"
+          >
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -146,32 +132,19 @@ export function AdminDashboardPage({ initialTab = 'cashier' }: { initialTab?: Ad
                   type="button"
                   aria-pressed={isActive}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex w-full items-center justify-between gap-3 rounded-md border px-3.5 py-3 text-left transition-all duration-fast ${
+                  className={`flex w-full items-center justify-between gap-2.5 rounded-sm px-3 py-2.5 text-left transition-colors duration-fast tablet:w-auto ${
                     isActive
-                      ? 'border-surface bg-magenta text-surface shadow-mode-active'
-                      : 'border-inverse bg-[#4c1d95]/60 text-surface hover:border-magenta hover:bg-[#581c87]'
+                      ? 'bg-magenta text-surface'
+                      : 'bg-transparent text-surface/80 hover:bg-surface/10 hover:text-surface'
                   }`}
                 >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-sm ${
-                        isActive ? 'bg-brand text-surface' : 'bg-surface/15 text-surface'
-                      }`}
-                    >
-                      {tab.icon}
-                    </div>
-                    <div className="min-w-0">
-                      <span className="block truncate font-display text-sm font-extrabold">
-                        {tab.label}
-                      </span>
-                      <span className="block truncate text-[11px] font-medium text-inverse">
-                        {tab.subtitle}
-                      </span>
-                    </div>
-                  </div>
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    {tab.icon}
+                    <span className="truncate font-display text-sm font-bold">{tab.label}</span>
+                  </span>
                   <span
-                    className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-extrabold ${
-                      isActive ? 'bg-surface text-magenta' : 'bg-brand text-inverse'
+                    className={`shrink-0 text-xs font-extrabold ${
+                      isActive ? 'text-surface' : 'text-inverse'
                     }`}
                   >
                     {tab.badge}
@@ -183,16 +156,11 @@ export function AdminDashboardPage({ initialTab = 'cashier' }: { initialTab?: Ad
         </div>
 
         {/* Outlet Session & Footer Controls */}
-        <div className="mt-6 border-t border-inverse pt-4">
-          <div className="mb-3 rounded-md bg-[#4c1d95]/70 px-3 py-2.5">
-            <p className="m-0 text-xs font-extrabold text-surface">
-              Akun Outlet: <span className="font-normal text-inverse">{user.outletId}</span>
-            </p>
-            <p className="m-0 mt-0.5 text-[11px] text-inverse">
-              Sesi aktif hingga {formatClock(session.expiresAt)}
-            </p>
-          </div>
-          <div className="grid gap-2">
+        <div className="mt-6 border-t border-inverse/30 pt-4">
+          <p className="m-0 mb-3 text-[11px] text-inverse">
+            {user.outletId} &bull; Sesi s.d. {formatClock(session.expiresAt)}
+          </p>
+          <div className="grid gap-1.5">
             <button
               type="button"
               onClick={() => void dashboard.refreshAll()}

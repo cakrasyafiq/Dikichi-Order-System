@@ -19,6 +19,18 @@ const COLUMNS: readonly {
   badgeText: string;
   nextStatus: ManagedOrderStatus;
   actionLabel: string;
+  theme: {
+    column: string;
+    columnHighlight: string;
+    headerBorder: string;
+    dot: string;
+    title: string;
+    countBadge: string;
+    emptyBox: string;
+    card: string;
+    cardBadge: string;
+    button: string;
+  };
 }[] = [
   {
     status: 'ACCEPTED',
@@ -27,6 +39,18 @@ const COLUMNS: readonly {
     badgeText: 'Menunggu Dapur',
     nextStatus: 'PREPARING',
     actionLabel: 'Geser ke Preparing \u2192',
+    theme: {
+      column: 'border-blue-300 bg-blue-50/70',
+      columnHighlight: 'border-2 border-blue-500 bg-blue-100/80',
+      headerBorder: 'border-blue-200',
+      dot: 'bg-blue-600',
+      title: 'text-blue-950',
+      countBadge: 'bg-blue-600 text-white',
+      emptyBox: 'border-blue-200 bg-white/80',
+      card: 'border-blue-200 bg-white',
+      cardBadge: 'border-blue-200 bg-blue-100 text-blue-800',
+      button: 'bg-blue-600 text-white hover:bg-blue-700',
+    },
   },
   {
     status: 'PREPARING',
@@ -35,6 +59,18 @@ const COLUMNS: readonly {
     badgeText: 'Sedang Disiapkan',
     nextStatus: 'READY',
     actionLabel: 'Geser ke Ready \u2192',
+    theme: {
+      column: 'border-yellow-400 bg-yellow-50/80',
+      columnHighlight: 'border-2 border-yellow-500 bg-yellow-100',
+      headerBorder: 'border-yellow-300',
+      dot: 'bg-yellow-500',
+      title: 'text-yellow-950',
+      countBadge: 'bg-yellow-400 text-yellow-950',
+      emptyBox: 'border-yellow-300 bg-white/80',
+      card: 'border-yellow-300 bg-white',
+      cardBadge: 'border-yellow-300 bg-yellow-100 text-yellow-900',
+      button: 'bg-yellow-500 text-yellow-950 hover:bg-yellow-400',
+    },
   },
   {
     status: 'READY',
@@ -43,6 +79,18 @@ const COLUMNS: readonly {
     badgeText: 'Siap Diambil',
     nextStatus: 'COMPLETED',
     actionLabel: 'Done (Selesai)',
+    theme: {
+      column: 'border-green-300 bg-green-50/70',
+      columnHighlight: 'border-2 border-green-500 bg-green-100/80',
+      headerBorder: 'border-green-200',
+      dot: 'bg-green-600',
+      title: 'text-green-950',
+      countBadge: 'bg-green-600 text-white',
+      emptyBox: 'border-green-200 bg-white/80',
+      card: 'border-green-200 bg-white',
+      cardBadge: 'border-green-200 bg-green-100 text-green-800',
+      button: 'bg-green-600 text-white hover:bg-green-700',
+    },
   },
 ];
 
@@ -73,7 +121,7 @@ export function OrdersQueueTab({ orders, isBusy, onChangeStatus }: OrdersQueueTa
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
         <div>
           <span className="mb-2 inline-block rounded-[10px] bg-magenta px-[18px] py-2 font-display text-[15px] font-extrabold text-surface">
-            2. Orders (Antrean Dapur)
+            Orders (Antrean Dapur)
           </span>
           <h2 id="orders-queue-heading" className="m-0 font-display text-xl font-extrabold text-brand">
             Monitor Antrean Dapur: Accepted &rarr; Preparing &rarr; Ready
@@ -83,6 +131,20 @@ export function OrdersQueueTab({ orders, isBusy, onChangeStatus }: OrdersQueueTa
             pesanan dari Accepted ke Preparing, lalu ke Ready, dan tekan Done saat pesanan selesai
             diambil.
           </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-blue-800">
+            <span className="h-2.5 w-2.5 rounded-full bg-blue-600" aria-hidden="true" />
+            Accepted
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-yellow-300 bg-yellow-50 px-3 py-1 text-yellow-900">
+            <span className="h-2.5 w-2.5 rounded-full bg-yellow-500" aria-hidden="true" />
+            Preparing
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-green-800">
+            <span className="h-2.5 w-2.5 rounded-full bg-green-600" aria-hidden="true" />
+            Ready
+          </span>
         </div>
       </div>
 
@@ -126,25 +188,35 @@ export function OrdersQueueTab({ orders, isBusy, onChangeStatus }: OrdersQueueTa
                 }
               }}
               className={`flex min-h-[380px] flex-col rounded-md border p-4 transition-colors duration-fast ${
-                isDropHighlighted
-                  ? 'border-2 border-magenta bg-tint'
-                  : 'border-line bg-canvas'
+                isDropHighlighted ? column.theme.columnHighlight : column.theme.column
               }`}
             >
-              <div className="mb-4 flex items-center justify-between gap-2 border-b border-line pb-3">
+              <div
+                className={`mb-4 flex items-center justify-between gap-2 border-b pb-3 ${column.theme.headerBorder}`}
+              >
                 <div>
-                  <h3 className="m-0 font-display text-base font-extrabold uppercase text-brand">
+                  <h3
+                    className={`m-0 flex items-center gap-2 font-display text-base font-extrabold uppercase ${column.theme.title}`}
+                  >
+                    <span
+                      className={`inline-block h-3 w-3 rounded-full ${column.theme.dot}`}
+                      aria-hidden="true"
+                    />
                     {column.title}
                   </h3>
                   <p className="m-0 text-xs text-muted">{column.subtitle}</p>
                 </div>
-                <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-magenta px-2 text-xs font-extrabold text-surface">
+                <span
+                  className={`inline-flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-xs font-extrabold ${column.theme.countBadge}`}
+                >
                   {columnOrders.length}
                 </span>
               </div>
 
               {columnOrders.length === 0 ? (
-                <div className="flex flex-1 items-center justify-center rounded-sm border border-dashed border-line bg-surface p-6 text-center">
+                <div
+                  className={`flex flex-1 items-center justify-center rounded-sm border border-dashed p-6 text-center ${column.theme.emptyBox}`}
+                >
                   <p className="m-0 text-xs font-semibold text-muted">
                     Belum ada pesanan di kolom {column.title}
                   </p>
@@ -160,7 +232,7 @@ export function OrdersQueueTab({ orders, isBusy, onChangeStatus }: OrdersQueueTa
                         setDraggedOrder(null);
                         setDropTarget(null);
                       }}
-                      className={`rounded-md border border-line bg-surface p-4 shadow-card ${
+                      className={`rounded-md border p-4 shadow-card ${column.theme.card} ${
                         column.status !== 'READY' ? 'cursor-grab active:cursor-grabbing' : ''
                       }`}
                     >
@@ -177,7 +249,9 @@ export function OrdersQueueTab({ orders, isBusy, onChangeStatus }: OrdersQueueTa
                           </p>
                         </div>
                         <div className="text-right">
-                          <span className="inline-block rounded-full border border-line bg-tint px-2.5 py-0.5 text-[10.5px] font-bold text-brand">
+                          <span
+                            className={`inline-block rounded-full border px-2.5 py-0.5 text-[10.5px] font-bold ${column.theme.cardBadge}`}
+                          >
                             {column.badgeText}
                           </span>
                           <p className="m-0 mt-1 text-[11px] text-muted">
@@ -214,11 +288,7 @@ export function OrdersQueueTab({ orders, isBusy, onChangeStatus }: OrdersQueueTa
                         disabled={isBusy}
                         aria-label={`${column.actionLabel} ${order.orderNumber}`}
                         onClick={() => void moveOrder(order, column.nextStatus)}
-                        className={`w-full rounded-full px-4 py-2 text-xs font-extrabold uppercase tracking-[0.03em] transition-colors duration-fast disabled:cursor-not-allowed disabled:opacity-60 ${
-                          column.status === 'READY'
-                            ? 'bg-brand text-surface hover:bg-magenta'
-                            : 'bg-magenta text-surface hover:bg-magenta-hover'
-                        }`}
+                        className={`w-full rounded-full px-4 py-2 text-xs font-extrabold uppercase tracking-[0.03em] transition-colors duration-fast disabled:cursor-not-allowed disabled:opacity-60 ${column.theme.button}`}
                       >
                         {column.actionLabel}
                       </button>
