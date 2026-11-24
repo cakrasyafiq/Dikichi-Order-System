@@ -28,6 +28,7 @@ CREATE TABLE menu_item (
     description  VARCHAR(500),
     price        INTEGER       NOT NULL,
     category     VARCHAR(50)   NOT NULL,
+    image_url    VARCHAR(500),
     available    BOOLEAN       NOT NULL DEFAULT TRUE,
     is_deleted   BOOLEAN       NOT NULL DEFAULT FALSE,
     created_at   TIMESTAMPTZ   NOT NULL DEFAULT now(),

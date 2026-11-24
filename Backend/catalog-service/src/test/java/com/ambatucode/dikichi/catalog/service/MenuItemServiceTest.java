@@ -63,6 +63,21 @@ class MenuItemServiceTest {
 
         assertThat(response.available()).isFalse();
         assertThat(response.description()).isNull();
+        assertThat(response.imageUrl()).isNull();
+    }
+
+    @Test
+    void createTrimsAndPersistsImageUrlAndNormalizesBlankToNull() {
+        caller.populate(Role.MASTER, null);
+
+        MenuItemResponse withImage = service.create("OUT-01",
+                new MenuItemCreateRequest("Crispy Chicken", "Original", 10000, "makanan",
+                        "  /api/v1/menu-images/menu_1.png  ", true));
+        MenuItemResponse blankImage = service.create("OUT-01",
+                new MenuItemCreateRequest("Nasi Putih", "Nasi", 5000, "makanan", "   ", true));
+
+        assertThat(withImage.imageUrl()).isEqualTo("/api/v1/menu-images/menu_1.png");
+        assertThat(blankImage.imageUrl()).isNull();
     }
 
     @Test
@@ -136,12 +151,14 @@ class MenuItemServiceTest {
         when(menuItems.findByIdAndDeletedFalse(id)).thenReturn(Optional.of(existing));
 
         MenuItemResponse response = service.replace(id,
-                new MenuItemReplaceRequest("  Mie Spesial  ", "Pedas manis", 28000, "  Mie  ", false));
+                new MenuItemReplaceRequest("  Mie Spesial  ", "Pedas manis", 28000, "  Mie  ",
+                        "  /api/v1/menu-images/menu_3.png  ", false));
 
         assertThat(response.name()).isEqualTo("Mie Spesial");
         assertThat(response.description()).isEqualTo("Pedas manis");
         assertThat(response.price()).isEqualTo(28000);
         assertThat(response.category()).isEqualTo("Mie");
+        assertThat(response.imageUrl()).isEqualTo("/api/v1/menu-images/menu_3.png");
         assertThat(response.available()).isFalse();
     }
 

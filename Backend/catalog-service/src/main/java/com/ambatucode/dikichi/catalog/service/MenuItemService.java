@@ -49,7 +49,7 @@ public class MenuItemService {
         caller.requireRole(Role.MASTER);
         requireActiveOutlet(outletId);
         MenuItem item = new MenuItem(outletId, request.name().strip(), request.description(), request.price(),
-                request.category().strip(), request.availableOrDefault());
+                request.category().strip(), normalizeImageUrl(request.imageUrl()), request.availableOrDefault());
         return CatalogMapper.toResponse(menuItems.save(item));
     }
 
@@ -58,7 +58,7 @@ public class MenuItemService {
         caller.requireRole(Role.MASTER);
         MenuItem item = requireActiveItem(menuItemId);
         item.replace(request.name().strip(), request.description(), request.price(),
-                request.category().strip(), request.available());
+                request.category().strip(), normalizeImageUrl(request.imageUrl()), request.available());
         return CatalogMapper.toResponse(item);
     }
 
@@ -75,6 +75,14 @@ public class MenuItemService {
     public void delete(UUID menuItemId) {
         caller.requireRole(Role.MASTER);
         requireActiveItem(menuItemId).markDeleted();
+    }
+
+    private static String normalizeImageUrl(String imageUrl) {
+        if (imageUrl == null) {
+            return null;
+        }
+        String stripped = imageUrl.strip();
+        return stripped.isEmpty() ? null : stripped;
     }
 
     private MenuItem requireActiveItem(UUID menuItemId) {

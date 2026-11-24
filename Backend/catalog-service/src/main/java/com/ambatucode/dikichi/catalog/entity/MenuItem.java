@@ -35,6 +35,9 @@ public class MenuItem {
     @Column(nullable = false, length = 50)
     private String category;
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @Column(nullable = false)
     private boolean available;
 
@@ -52,11 +55,17 @@ public class MenuItem {
 
     public MenuItem(String outletId, String name, String description, int price, String category,
                     boolean available) {
+        this(outletId, name, description, price, category, null, available);
+    }
+
+    public MenuItem(String outletId, String name, String description, int price, String category,
+                    String imageUrl, boolean available) {
         this.outletId = outletId;
         this.name = name;
         this.description = description;
         this.price = price;
         this.category = category;
+        this.imageUrl = imageUrl;
         this.available = available;
     }
 
@@ -72,10 +81,16 @@ public class MenuItem {
     }
 
     public void replace(String name, String description, int price, String category, boolean available) {
+        replace(name, description, price, category, this.imageUrl, available);
+    }
+
+    public void replace(String name, String description, int price, String category, String imageUrl,
+                        boolean available) {
         this.name = name;
         this.description = description;
         this.price = price;
         this.category = category;
+        this.imageUrl = imageUrl;
         this.available = available;
     }
 
@@ -109,6 +124,10 @@ public class MenuItem {
 
     public String getCategory() {
         return category;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
     }
 
     public boolean isAvailable() {

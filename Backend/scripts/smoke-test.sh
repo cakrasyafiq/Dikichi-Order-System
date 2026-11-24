@@ -6,7 +6,7 @@ set -u
 BASE="${BASE_URL:-http://localhost:8080}"
 ENV_FILE="${ENV_FILE:-../.env}"
 MENU_MIE="11111111-0000-4000-8000-000000000001"
-MENU_ES_TEH="11111111-0000-4000-8000-000000000009"
+MENU_ES_TEH="11111111-0000-4000-8000-000000000018"
 MENU_SOLD_OUT="11111111-0000-4000-8000-000000000008"
 
 if [ ! -f "$ENV_FILE" ]; then echo "Env file not found: $ENV_FILE"; exit 2; fi
@@ -106,8 +106,8 @@ echo "== Orders PUT and PATCH =="
 ITEMS_NEW="[{\"menuItemId\":\"$MENU_MIE\",\"quantity\":1},{\"menuItemId\":\"$MENU_ES_TEH\",\"quantity\":2}]"
 call PUT "/api/v1/orders/$ORDER_ID" "$CASHIER" "$(order_body OUT-01 T-02 "Budi Santoso" "$ITEMS_NEW")"
 check "PUT order PENDING" 200
-[ "$(field '.totalAmount')" = "37000" ] && { PASS=$((PASS + 1)); echo "PASS  PUT order total recalculated to 37000"; } \
-  || { FAIL=$((FAIL + 1)); echo "FAIL  PUT order total expected 37000, got $(field '.totalAmount')"; }
+[ "$(field '.totalAmount')" = "22000" ] && { PASS=$((PASS + 1)); echo "PASS  PUT order total recalculated to 22000"; } \
+  || { FAIL=$((FAIL + 1)); echo "FAIL  PUT order total expected 22000, got $(field '.totalAmount')"; }
 call PUT "/api/v1/orders/$ORDER_ID" "$CASHIER" "$(order_body OUT-02 T-02 Budi "$ITEMS_NEW")"
 check "PUT order changing outlet" 400 OUTLET_IMMUTABLE
 call PATCH "/api/v1/orders/$ORDER_ID/status" "$KITCHEN" '{"status":"CANCELLED"}'; check "PATCH CANCELLED as KITCHEN" 403 FORBIDDEN

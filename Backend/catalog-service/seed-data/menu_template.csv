@@ -1,0 +1,4 @@
+id,outlet_id,name,description,price,category,available,image_filename
+11111111-0000-4000-8000-000000000001,OUT-01,Mie Suit,Mie gurih dengan topping ayam cincang dan pangsit,25000,Mie,TRUE,mie-suit.jpg
+11111111-0000-4000-8000-000000000002,OUT-01,Dimsum Ayam (3 pcs),Dimsum ayam kukus isi 3 pcs,18000,Dimsum,TRUE,dimsum-ayam.jpg
+11111111-0000-4000-8000-000000000003,OUT-01,Es Teh Manis,Teh manis dingin segar,6000,Minuman,TRUE,es-teh-manis.jpg

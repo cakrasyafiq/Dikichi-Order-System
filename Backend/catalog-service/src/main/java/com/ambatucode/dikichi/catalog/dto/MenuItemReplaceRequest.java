@@ -11,5 +11,10 @@ public record MenuItemReplaceRequest(
         @Size(max = 500) String description,
         @NotNull @Min(1) @Max(10_000_000) Integer price,
         @NotBlank @Size(max = 50) String category,
+        @Size(max = 500) String imageUrl,
         @NotNull Boolean available) {
+
+    public MenuItemReplaceRequest(String name, String description, Integer price, String category, Boolean available) {
+        this(name, description, price, category, null, available);
+    }
 }

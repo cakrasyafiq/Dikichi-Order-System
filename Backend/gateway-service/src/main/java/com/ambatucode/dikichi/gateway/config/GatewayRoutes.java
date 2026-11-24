@@ -12,7 +12,7 @@ public class GatewayRoutes {
     public RouteLocator routes(RouteLocatorBuilder builder, UpstreamProperties upstream) {
         return builder.routes()
                 .route("catalog-service", route -> route
-                        .path("/api/v1/auth/**", "/api/v1/outlets/**", "/api/v1/menu-items/**")
+                        .path("/api/v1/auth/**", "/api/v1/outlets/**", "/api/v1/menu-items/**", "/api/v1/menu-images/**")
                         .uri(upstream.catalog()))
                 .route("order-service", route -> route
                         .path("/api/v1/orders/**", "/api/v2/orders/**")

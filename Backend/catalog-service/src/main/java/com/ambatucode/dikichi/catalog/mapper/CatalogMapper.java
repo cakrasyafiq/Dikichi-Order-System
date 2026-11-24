@@ -22,6 +22,6 @@ public final class CatalogMapper {
 
     public static MenuItemResponse toResponse(MenuItem item) {
         return new MenuItemResponse(item.getId(), item.getOutletId(), item.getName(), item.getDescription(),
-                item.getPrice(), item.getCategory(), item.isAvailable());
+                item.getPrice(), item.getCategory(), item.getImageUrl(), item.isAvailable());
     }
 }

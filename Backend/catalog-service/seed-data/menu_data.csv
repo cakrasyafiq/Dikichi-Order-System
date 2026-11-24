@@ -1,0 +1,31 @@
+name,description,price,category,image_filename
+Crispy Chicken Ori Besar,Dada/paha atas goreng crispy dengan rasa original,10000,makanan,menu_1.png
+Crispy Chicken Ori Kecil,Sayap/paha bawah goreng crispy dengan rasa original,9000,makanan,menu_2.png
+Crispy Chicken Hot Besar,Dada/paha atas goreng crispy dengan rasa pedas,11000,makanan,menu_3.png
+Crispy Chicken Hot Kecil,Sayap/paha bawah goreng crispy dengan rasa pedas,10000,makanan,menu_4.png
+Crispy Chicken Nashville Besar,Dada/paha atas goreng crispy dengan bumbu pedas nashville,15000,makanan,menu_5.png
+Crispy Chicken Nashville Kecil,Sayap/paha bawah goreng crispy dengan bumbu pedas nashville,13000,makanan,menu_6.png
+Nasi Putih,Nasi putih hangat,5000,makanan,menu_7.png
+Udang keju,Nugget udang berisi keju lumer,10000,snack,menu_8.png
+Lumpia Udang,Adonan dimsum udang digoreng dalam kulit tahu,10000,snack,menu_9.png
+French Fries,Kentang goreng,9000,snack,menu_10.png
+Choco Sundae,Es krim vanila dengan topping sirup cokelat,11000,snack,menu_11.png
+Oreo Sundae,Es krim vanila dengan topping remahan oreo,11000,snack,menu_12.png
+Strawberry Sundae,Es krim vanila dengan topping sirup strawberry,11000,snack,menu_13.png
+Lemon Tea,Teh dengan rasa lemon,6000,minuman,menu_14.png
+Milo,Minuman rasa cokelat milo,8000,minuman,menu_15.png
+Orange,Minuman rasa sirup jeruk,7000,minuman,menu_16.png
+Tek Tarik,Teh tarik dari Nestea,8000,minuman,menu_17.png
+Es Teh Manis,Teh manis dingin,6000,minuman,menu_18.png
+Paket Nasi Crispy Ori Besar,1x Crispy Chicken Ori Besar + 1x Nasi Putih,14000,paket,menu_19.png
+Paket Nasi Crispy Ori Kecil,1x Crispy Chicken Ori Kecil + 1x Nasi Putih,12000,paket,menu_20.png
+Paket Nasi Crispy Hot Besar,1x Crispy Chicken Hot Besar + 1x Nasi Putih,15000,paket,menu_21.png
+Paket Nasi Crispy Hot Kecil,1x Crispy Chicken Hot Kecil + 1x Nasi Putih,14000,paket,menu_22.png
+Paket Nasi Crispy Nashville Besar,1x Crispy Chicken Nashville Besar + 1x Nasi Putih,19000,paket,menu_23.png
+Paket Nasi Crispy Nashville Kecil,1x Crispy Chicken Nashville Kecil + 1x Nasi Putih,17000,paket,menu_24.png
+Paket Lengkap Crispy Ori Besar,1x Crispy Chicken Ori Besar + 1x Nasi Putih +1x Es Teh Manis,16000,paket,menu_25.png
+Paket Lengkap Crispy Ori Kecil,1x Crispy Chicken Ori Kecil + 1x Nasi Putih +1x Es Teh Manis,14000,paket,menu_26.png
+Paket Lengkap Crispy Hot Besar,1x Crispy Chicken Hot Besar + 1x Nasi Putih +1x Es Teh Manis,17000,paket,menu_27.png
+Paket Lengkap Crispy Hot Kecil,1x Crispy Chicken Hot Kecil + 1x Nasi Putih +1x Es Teh Manis,16000,paket,menu_28.png
+Paket Lengkap Crispy Nashville Besar,1x Crispy Chicken Nashville Besar + 1x Nasi Putih +1x Es Teh Manis,21000,paket,menu_29.png
+Paket Lengkap Crispy Nashville Kecil,1x Crispy Chicken Nashville Kecil + 1x Nasi Putih +1x Es Teh Manis,19000,paket,menu_30.png

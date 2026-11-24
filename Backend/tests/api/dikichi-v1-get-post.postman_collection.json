@@ -11,7 +11,7 @@
     },
     {
       "key": "esTehId",
-      "value": "11111111-0000-4000-8000-000000000009"
+      "value": "11111111-0000-4000-8000-000000000018"
     },
     {
       "key": "soldOutId",
@@ -319,7 +319,7 @@
                   "pm.test(\"Waktu respons di bawah 2000 ms\", () => pm.expect(pm.response.responseTime).to.be.below(2000));",
                   "pm.test(\"Content-Type JSON\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\"));",
                   "const j = pm.response.json();",
-                  "pm.test(\"Bentuk item menu\", () => j.forEach(m => { pm.expect(m).to.have.all.keys(\"id\", \"outletId\", \"name\", \"description\", \"price\", \"category\", \"available\"); pm.expect(m.price).to.be.a(\"number\"); pm.expect(Number.isInteger(m.price)).to.be.true; pm.expect(m.available).to.be.a(\"boolean\"); }));",
+                  "pm.test(\"Bentuk item menu\", () => j.forEach(m => { pm.expect(m).to.have.all.keys(\"id\", \"outletId\", \"name\", \"description\", \"price\", \"category\", \"imageUrl\", \"available\"); pm.expect(m.price).to.be.a(\"number\"); pm.expect(Number.isInteger(m.price)).to.be.true; pm.expect(m.available).to.be.a(\"boolean\"); }));",
                   "pm.test(\"Item sold out tetap ditampilkan\", () => pm.expect(j.some(m => m.available === false)).to.be.true);"
                 ]
               }

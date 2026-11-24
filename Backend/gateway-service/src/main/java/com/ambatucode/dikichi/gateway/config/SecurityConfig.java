@@ -3,6 +3,7 @@ package com.ambatucode.dikichi.gateway.config;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -18,6 +19,9 @@ import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsConfigurationSource;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -31,10 +35,12 @@ public class SecurityConfig {
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .cors(Customizer.withDefaults())
                 .authorizeExchange(exchanges -> exchanges
+                        .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // WHY: exact path for POST orders, so POST /orders/{id}/pay stays protected
                         .pathMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/orders", "/api/v2/orders").permitAll()
-                        .pathMatchers(HttpMethod.GET, "/api/v1/outlets/**", "/api/v1/menu-items/**").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/v1/outlets/**", "/api/v1/menu-items/**", "/api/v1/menu-images/**").permitAll()
                         .pathMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**").permitAll()
                         .pathMatchers("/internal/**").permitAll()
                         .anyExchange().authenticated())
@@ -61,6 +67,18 @@ public class SecurityConfig {
         return NimbusReactiveJwtDecoder.withSecretKey(new SecretKeySpec(secret, "HmacSHA256"))
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Location"));
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
     private static Mono<Void> writeError(ServerWebExchange exchange, HttpStatus status, String code,
